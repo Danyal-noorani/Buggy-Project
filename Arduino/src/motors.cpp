@@ -2,14 +2,14 @@
 #include <Arduino.h>
 #include "motors.h"
 
-int mode = 0;
+MotorMoveMode mode = STOP;
 int lastMode = 0;
 unsigned long previousMillisMotor = 0;
 uint8_t maxSpeed = 80;
 float turnMultiplier = 0.17;
 float slowDownFactor = 0.55;
 // float motorBalanceValue = 0.93;
-float motorBalanceValue = 0.92;
+float motorBalanceValue = 1;
 bool newUpdate = false;
 
 // @brief Sets up motor pins and enables forward direction
@@ -135,7 +135,7 @@ void turnLeft()
 }
 
 // @brief sets movement Mode
-void setMode(int newMode)
+void setMode(MotorMoveMode newMode)
 {
     mode = newMode;
 }

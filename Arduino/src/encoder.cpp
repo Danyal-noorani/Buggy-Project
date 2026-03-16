@@ -20,7 +20,7 @@ int requiredPulses = 0;
 int initialRightCounter = 0;
 int initialLeftCounter = 0;
 
-MoveMode mode = STOPMOVE;
+MoveMode encoderMode = STOPMOVE;
 
 void hallSensorsSetup()
 {
@@ -52,43 +52,53 @@ void hallSensorsLoop()
         realSpeed = 0;
     }
 
-    switch (mode)
+    switch (encoderMode)
     {
 
     case FORWARD:
+    {
         int lDiff = getLCounter() - initialLeftCounter;
         int rDiff = getRCounter() - initialRightCounter;
-        if (rDiff < requiredPulses || lDiff < requiredPulses)
+        Serial.println(lDiff);
+        Serial.println(rDiff);
+        Serial.println(requiredPulses);
+        if (rDiff < requiredPulses && lDiff < requiredPulses)
         {
-            if (rDiff - requiredPulses == 1 || lDiff - requiredPulses == 1)
+            if (rDiff - requiredPulses <= 2 || lDiff - requiredPulses <= 2)
             {
-                setMotors(45, 45);
+                setMotors(35, 35);
             }
             else
             {
 
-                setMotors(80, 80);
+                setMotors(35, 35);
             }
         }
         else
         {
             stopMotors();
-            mode = STOPMOVE;
+            encoderMode = STOPMOVE;
             initialLeftCounter = 0;
             initialRightCounter = 0;
         }
-
         break;
+    }
+
     case TURN:
-        if (getLCounter(true) - initialLeftCounter < requiredPulses)
+    {
+        // Serial.println("TURNING");
+        Serial.println(getLCounter(true));
+
+        if (getLCounter(true) - initialLeftCounter > requiredPulses)
         {
             stopMotors();
-            mode = STOPMOVE;
+            encoderMode = STOPMOVE;
             initialLeftCounter = 0;
             setMotorForward(0);
             setMotorForward(1);
         }
         break;
+    }
     case STOPMOVE:
         break;
 
@@ -100,7 +110,7 @@ void hallSensorsLoop()
 void IncrementCounter()
 {
     leftCounter += 1;
-    if (mode == FORWARD) // Updates Speed and distance only if moving forward
+    if (encoderMode == FORWARD) // Updates Speed and distance only if moving forward
     {
         updateSpeed();
         updateTotalDistance();
@@ -110,8 +120,9 @@ void IncrementCounter()
 void turnDirection(int direction)
 {
     initialLeftCounter = getLCounter();
+    Serial.println(initialLeftCounter);
 
-    requiredPulses = 2;
+    requiredPulses = 4;
 
     if (direction == 0) // Turn Left
     {
@@ -122,13 +133,14 @@ void turnDirection(int direction)
         setMotorBackward(0);
     }
     setMotors(35, 35);
-    mode = TURN;
+    encoderMode = TURN;
 }
 
 void moveDistance(int distance)
 {
     requiredPulses = ceil(distance / DistancePerPulse);
-    mode = FORWARD;
+    Serial.println(requiredPulses);
+    encoderMode = FORWARD;
     initialLeftCounter = getLCounter();
     initialRightCounter = getRCounter();
 }

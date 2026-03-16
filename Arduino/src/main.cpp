@@ -13,8 +13,6 @@ void setup()
     // setupIrSensors();
     setupMotors();
     hallSensorsSetup();
-    // moveDistance(100);
-    turnDirection(0);
 }
 void loop()
 {
