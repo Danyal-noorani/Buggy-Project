@@ -48,6 +48,7 @@ void WiFiLoop()
 
                 // Null terminate required for strcmp
                 buffer[len] = '\0';
+                Serial.println(buffer);
 
                 if (strcmp(buffer, "START") == 0)
                 {

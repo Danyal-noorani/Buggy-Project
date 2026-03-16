@@ -119,18 +119,18 @@ void IncrementCounter()
 
 void turnDirection(int direction)
 {
-    initialLeftCounter = getLCounter();
+    initialLeftCounter = getLCounter(true);
     Serial.println(initialLeftCounter);
 
     requiredPulses = 4;
 
     if (direction == 0) // Turn Left
     {
-        setMotorBackward(1);
+        setMotorBackward(0);
     }
     else if (direction == 1) // Turn Right
     {
-        setMotorBackward(0);
+        setMotorBackward(1);
     }
     setMotors(35, 35);
     encoderMode = TURN;
@@ -148,7 +148,7 @@ void moveDistance(int distance)
 void updateSpeed()
 {
     long currentMillis = millis();
-    realSpeed = DistancePerPulse / (sinceLastPulse - currentMillis);
+    realSpeed = DistancePerPulse / (currentMillis - sinceLastPulse);
     sinceLastPulse = currentMillis;
 }
 
