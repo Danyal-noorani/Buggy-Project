@@ -1,6 +1,6 @@
+#include "motors.h"
 #include <Arduino.h>
 #include <WiFiS3.h>
-#include "motors.h"
 #include "ultraSonic.h"
 #include "irSensor.h"
 #include "encoder.h"
@@ -43,10 +43,6 @@ void WiFiLoop()
                 static char buffer[64];
 
                 int len = client.readBytesUntil('\n', buffer, sizeof(buffer) - 1);
-                if (strcmp(buffer, "GET_DATA") != 0)
-                {
-                    Serial.println(buffer);
-                }
                 if (len <= 0)
                     return;
 
@@ -62,14 +58,37 @@ void WiFiLoop()
                 {
                     disableMotors();
                 }
+                else if (strcmp(buffer, "RIGHT") == 0)
+                {
+                    turnDirection(1);
+                }
+
+                else if (strcmp(buffer, "LEFT") == 0)
+                {
+                    turnDirection(0);
+                }
+                else if (strncmp(buffer, "MOVE:", 5) == 0)
+                {
+                    char *token = strtok(buffer + 5, ":");
+                    if (token != NULL)
+                    {
+                        moveDistance(atoi(token));
+                    }
+                }
 
                 else if (strcmp(buffer, "GET_DATA") == 0)
                 {
-
-                    // Send flowing structure ->  distance:LeftIRP_State:RightIRP_State
+                    /* ----------- NOT BEING USED -----------
+                    Send flowing structure ->  distance:LeftIRP_State:RightIRP_State
                     client.println(String(getDistance()) + ":" + String(getDataLeft()) + ":" + String(getDataRight()));
+                    */
+
+                    client.println(String(getDistance()) + ":" + String(getSpeed()) + ":" + String(getTotalDistance()));
                 }
-                // Values come in the format "VALUES:{SPEED}:{BALANCE}:{TURN_MULTIPLIER}:{SLOW_DOWN_FACTOR}"
+
+                /* ----------- NOT BEING USED -----------
+
+                Values come in the format "VALUES:{SPEED}:{BALANCE}:{TURN_MULTIPLIER}:{SLOW_DOWN_FACTOR}"
                 else if (strncmp(buffer, "VALUES:", 7) == 0)
                 {
                     int index = 0;
@@ -99,7 +118,8 @@ void WiFiLoop()
                         token = strtok(NULL, ":");
                     }
                 }
-                // --------------------------------------------- UPDATES END ---------------------------------------------
+
+                */
 
                 memset(buffer, 0, sizeof(buffer)); // Clears buffer for next command
             }

@@ -34,12 +34,12 @@ void IrSensorLoop()
 
         else if (LeftIRP_State == LOW && RightIRP_State == HIGH)
         {
-            setMode(TURN_LEFT);
+            setMode(LEFT);
         }
 
         else if (LeftIRP_State == HIGH && RightIRP_State == LOW)
         {
-            setMode(TURN_RIGHT);
+            setMode(RIGHT);
         }
 
         else if (LeftIRP_State == HIGH && RightIRP_State == HIGH)

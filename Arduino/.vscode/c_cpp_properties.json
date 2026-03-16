@@ -8,8 +8,8 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "/home/danyal/Documents/PlatformIO/Projects/W4/include",
-                "/home/danyal/Documents/PlatformIO/Projects/W4/src",
+                "/home/danyal/Documents/PlatformIO/Projects/W4/Arduino/include",
+                "/home/danyal/Documents/PlatformIO/Projects/W4/Arduino/src",
                 "/home/danyal/.platformio/packages/framework-arduinorenesas-uno/libraries/WiFiS3/src",
                 "/home/danyal/.platformio/packages/framework-arduinorenesas-uno/cores/arduino/tinyusb",
                 "/home/danyal/.platformio/packages/framework-arduinorenesas-uno/cores/arduino",
@@ -42,8 +42,8 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "/home/danyal/Documents/PlatformIO/Projects/W4/include",
-                    "/home/danyal/Documents/PlatformIO/Projects/W4/src",
+                    "/home/danyal/Documents/PlatformIO/Projects/W4/Arduino/include",
+                    "/home/danyal/Documents/PlatformIO/Projects/W4/Arduino/src",
                     "/home/danyal/.platformio/packages/framework-arduinorenesas-uno/libraries/WiFiS3/src",
                     "/home/danyal/.platformio/packages/framework-arduinorenesas-uno/cores/arduino/tinyusb",
                     "/home/danyal/.platformio/packages/framework-arduinorenesas-uno/cores/arduino",

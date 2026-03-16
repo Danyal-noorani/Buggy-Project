@@ -1,10 +1,27 @@
-#include "encoder.h"
 #include "motors.h"
-volatile int leftCounter = 0;
-int rightCounter = 0;
+#include "encoder.h"
 
 byte shiftIn(int myDataPin, int myClockPin);
 void IncrementCounter();
+void updateSpeed();
+void updateTotalDistance();
+
+volatile int leftCounter = 0;
+int rightCounter = 0;
+
+long sinceLastSpeedUpdate = millis();
+double realSpeed = 0.0;
+
+long sinceLastPulse = sinceLastSpeedUpdate;
+
+double totalDistance = 0.0;
+
+int requiredPulses = 0;
+int initialRightCounter = 0;
+int initialLeftCounter = 0;
+
+MoveMode mode = STOPMOVE;
+
 void hallSensorsSetup()
 {
     // -- LEFT SENSOR --
@@ -12,7 +29,7 @@ void hallSensorsSetup()
     pinMode(LeftSensor, INPUT_PULLUP);
 
     // Attach Interrupt
-    attachInterrupt(digitalPinToInterrupt(LeftSensor), IncrementCounter, RISING); // Rising as analogue only takes input on HIGH
+    attachInterrupt(digitalPinToInterrupt(LeftSensor), IncrementCounter, CHANGE); // Rising as analogue only takes input on HIGH
 
     // -- RIGHT SENSOR --
     pinMode(ClockPin, OUTPUT);
@@ -26,74 +43,106 @@ void hallSensorsSetup()
     digitalWrite(ResetPin, LOW);
 }
 
+void hallSensorsLoop()
+{
+
+    long currentMillis = millis();
+    if (sinceLastSpeedUpdate + 1000 > currentMillis)
+    {
+        realSpeed = 0;
+    }
+
+    switch (mode)
+    {
+
+    case FORWARD:
+        int lDiff = getLCounter() - initialLeftCounter;
+        int rDiff = getRCounter() - initialRightCounter;
+        if (rDiff < requiredPulses || lDiff < requiredPulses)
+        {
+            if (rDiff - requiredPulses == 1 || lDiff - requiredPulses == 1)
+            {
+                setMotors(45, 45);
+            }
+            else
+            {
+
+                setMotors(80, 80);
+            }
+        }
+        else
+        {
+            stopMotors();
+            mode = STOPMOVE;
+            initialLeftCounter = 0;
+            initialRightCounter = 0;
+        }
+
+        break;
+    case TURN:
+        if (getLCounter(true) - initialLeftCounter < requiredPulses)
+        {
+            stopMotors();
+            mode = STOPMOVE;
+            initialLeftCounter = 0;
+            setMotorForward(0);
+            setMotorForward(1);
+        }
+        break;
+    case STOPMOVE:
+        break;
+
+    default:
+        break;
+    }
+}
+
 void IncrementCounter()
 {
     leftCounter += 1;
+    if (mode == FORWARD) // Updates Speed and distance only if moving forward
+    {
+        updateSpeed();
+        updateTotalDistance();
+    }
 }
 
-int getLCounter()
+void turnDirection(int direction)
 {
-    return leftCounter;
-}
-int getRCounter()
-{
-    digitalWrite(LatchPin, HIGH);
-    delayMicroseconds(40);
-    digitalWrite(LatchPin, LOW);
-    return (int)shiftIn(DataPin, ClockPin);
-}
+    initialLeftCounter = getLCounter();
 
-void hallSensorsLoop()
-{
-    Serial.print("Left Counter: ");
-    Serial.print(getLCounter());
-    Serial.print(" Right Counter: ");
-    Serial.println(getRCounter(), DEC);
-}
+    requiredPulses = 2;
 
-void turnDirection(int direction, int speed, int degrees)
-{
-    int initialLeftCounter = getLCounter();
-    int initialRightCounter = getRCounter();
-    int pulses = ceil(degrees / 45) + 1;
-    if (direction = TURN_LEFT)
+    if (direction == 0) // Turn Left
     {
         setMotorBackward(1);
-        setMotors(speed, speed);
     }
-    else if (direction = TURN_RIGHT)
+    else if (direction == 1) // Turn Right
     {
         setMotorBackward(0);
-        setMotors(speed, speed);
     }
-    while ((getLCounter() - initialLeftCounter) < pulses && (getRCounter() - initialRightCounter) < pulses)
-    {
-        continue;
-    }
-    Serial.print("Left Counter: ");
-    Serial.print(getLCounter());
-    Serial.print(" Right Counter: ");
-    Serial.println(getRCounter(), DEC);
-    setMotorForward(0);
-    setMotorForward(1);
-    stopMotors();
+    setMotors(35, 35);
+    mode = TURN;
 }
 
-void moveDistance(int distance, int speed)
+void moveDistance(int distance)
 {
-    int pulses = ceil(distance / DistancePerPulse);
-    int initialLeftCounter = getLCounter();
-    int initialRightCounter = getRCounter();
-    setMotors(speed, speed);
-    while (getLCounter() - initialLeftCounter < pulses && getRCounter() - initialRightCounter < pulses)
-    {
-        Serial.print("Left Counter: ");
-        Serial.print(getLCounter());
-        Serial.print(" Right Counter: ");
-        Serial.println(getRCounter(), DEC);
-        continue;
-    }
-    stopMotors();
+    requiredPulses = ceil(distance / DistancePerPulse);
+    mode = FORWARD;
+    initialLeftCounter = getLCounter();
+    initialRightCounter = getRCounter();
+}
+
+void updateSpeed()
+{
+    long currentMillis = millis();
+    realSpeed = DistancePerPulse / (sinceLastPulse - currentMillis);
+    sinceLastPulse = currentMillis;
+}
+
+void updateTotalDistance()
+{
+    totalDistance += DistancePerPulse;
 }
 
 double getAverageCounter()
@@ -103,19 +152,27 @@ double getAverageCounter()
 
 double getTotalDistance()
 {
-    return DistancePerPulse * getAverageCounter();
+    return totalDistance;
 }
-
 double getSpeed()
 {
-    return 0;
+    return realSpeed;
 }
-// int milisec , int previousCounterVal (average previous count) ,
-// wait for X mills, then calculate speed using int currentCounterVal(average current counter) / X mills
 
-// int getSpeed
-
-// From Given Example
+int getLCounter(bool highRes)
+{
+    if (highRes)
+        return leftCounter;
+    return leftCounter / 2;
+}
+int getRCounter()
+{
+    digitalWrite(LatchPin, HIGH);
+    delayMicroseconds(40);
+    digitalWrite(LatchPin, LOW);
+    return (int)shiftIn(DataPin, ClockPin);
+}
+// ------------------------------------------------------------------------------------------------------------------------
 byte shiftIn(int myDataPin, int myClockPin)
 {
 

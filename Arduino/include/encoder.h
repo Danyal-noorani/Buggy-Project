@@ -11,12 +11,19 @@
 
 #define DistancePerPulse 5.1
 
+enum MoveMode
+{
+    FORWARD,
+    TURN,
+    STOPMOVE
+};
+
 void hallSensorsSetup();
-int getLCounter();
+int getLCounter(bool highRes =false);
 int getRCounter();
 void hallSensorsLoop();
-void turnDirection(int direction, int speed, int degrees);
-void moveDistance(int distance, int speed);
+void turnDirection(int direction);
+void moveDistance(int distance);
 double getAverageCounter();
 double getTotalDistance();
 double getSpeed();
