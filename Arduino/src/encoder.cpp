@@ -5,13 +5,16 @@ byte shiftIn(int myDataPin, int myClockPin);
 void IncrementCounter();
 void updateSpeed();
 void updateTotalDistance();
+void updateCalibrateMotors();
 
 volatile int leftCounter = 0;
 
 volatile long sinceLastSpeedUpdate = 0;
 volatile double realSpeed = 0.0;
 
-volatile long sinceLastPulse = sinceLastSpeedUpdate;
+volatile long sinceLastPulse = 0;
+
+long sinceLastCalibration = 0;
 
 double totalDistance = 0.0;
 
@@ -40,12 +43,18 @@ void hallSensorsSetup()
     digitalWrite(ResetPin, HIGH);
     delayMicroseconds(20);
     digitalWrite(ResetPin, LOW);
+    sinceLastCalibration = sinceLastPulse = sinceLastSpeedUpdate = millis();
 }
 
 void hallSensorsLoop()
 {
-
     long currentMillis = millis();
+    if (currentMillis - sinceLastCalibration > 1000)
+    {
+        updateCalibrateMotors();
+        sinceLastCalibration = currentMillis;
+    }
+
     if (currentMillis - sinceLastSpeedUpdate > 1000)
     {
         realSpeed = 0;
@@ -61,19 +70,20 @@ void hallSensorsLoop()
 
         if (rDiff < requiredPulses && lDiff < requiredPulses)
         {
-            if ((rDiff - requiredPulses) < 2 || (lDiff - requiredPulses) < 2)
+            if ((requiredPulses - rDiff) < 2 || (requiredPulses - lDiff) < 2)
             {
-                setMotors(35, 35);
+                setMotors(55, 55);
             }
+
             else
             {
-                // setMotors(35, 35);
 
                 setMotors(100, 100);
             }
         }
         else
         {
+            brake();
             stopMotors();
             encoderMode = STOPMOVE;
             initialLeftCounter = 0;
@@ -84,8 +94,6 @@ void hallSensorsLoop()
 
     case TURN:
     {
-        // Serial.println("TURNING");
-        // Serial.println(getLCounter(true));
 
         if (getLCounter(true) - initialLeftCounter >= requiredPulses)
         {
@@ -103,11 +111,6 @@ void hallSensorsLoop()
     default:
         break;
     }
-}
-
-void setRequiredPulses(int pulses)
-{
-    requiredPulses = pulses;
 }
 
 void IncrementCounter()
@@ -188,11 +191,17 @@ int getRCounter()
     digitalWrite(LatchPin, LOW);
     return (int)shiftIn(DataPin, ClockPin);
 }
-void calibrateMotors()
+void updateCalibrateMotors()
 {
-    moveDistance(100);
+
     int L = getLCounter();
     int R = getRCounter();
+    if (L == 0 || R == 0)
+        return;
+    float temp = (float)R / (float)L;
+    temp = constrain(temp, 0.8, 1.0);
+    Serial.println(temp);
+    setMotorBalance(temp);
 }
 // ------------------------------------------------------------------------------------------------------------------------
 byte shiftIn(int myDataPin, int myClockPin)

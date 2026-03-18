@@ -13,6 +13,8 @@ void setup()
     // setupIrSensors();
     setupMotors();
     hallSensorsSetup();
+    // setMotors(100, 100);
+    // moveDistance(60);
 }
 void loop()
 {

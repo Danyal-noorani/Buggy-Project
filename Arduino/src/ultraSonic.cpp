@@ -1,6 +1,7 @@
 #include "ultraSonic.h"
 #include "irSensor.h"
 #include "encoder.h"
+#include "motors.h"
 
 int distance;
 unsigned long previousMillisUS = 0;
@@ -39,7 +40,10 @@ void ultraSonicLoop()
         {
             repCount = 0;
             distance = 50;
+            Serial.println("No Obsticale");
+
             setDisableIr(false);
+            enableMotors();
             return;
         }
         else
@@ -65,13 +69,16 @@ void ultraSonicLoop()
 
         if (repCount >= 3)
         {
-            // Serial.println("Obstacle");
+            Serial.println("Obstacle");
             setDisableIr(true);
-            setRequiredPulses(0);
+            disableMotors();
         }
         else
         {
+            Serial.println("No Obsticale");
+
             setDisableIr(false);
+            enableMotors();
         }
     }
 }

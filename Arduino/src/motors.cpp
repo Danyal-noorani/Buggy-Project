@@ -185,7 +185,7 @@ void brake()
 {
     setMotorBackward(1);
     setMotorBackward(0);
-    setMotors(25, 25);
+    setMotors(15, 21);
     delay(200);
     stopMotors();
     setMotorForward(1);

@@ -27,4 +27,3 @@ void moveDistance(int distance);
 double getAverageCounter();
 double getTotalDistance();
 double getSpeed();
-void setRequiredPulses(int pulses);
