@@ -15,7 +15,8 @@ enum MoveMode
 {
     FORWARD,
     TURN,
-    STOPMOVE
+    STOPMOVE,
+    WAITING
 };
 
 void hallSensorsSetup();

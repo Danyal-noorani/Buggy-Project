@@ -1,5 +1,6 @@
 #include "motors.h"
 #include "encoder.h"
+#include "ultraSonic.h"
 
 byte shiftIn(int myDataPin, int myClockPin);
 void IncrementCounter();
@@ -60,56 +61,67 @@ void hallSensorsLoop()
         realSpeed = 0;
     }
 
-    switch (encoderMode)
+    if (!getStop())
     {
-
-    case FORWARD:
-    {
-        int lDiff = getLCounter() - initialLeftCounter;
-        int rDiff = getRCounter() - initialRightCounter;
-
-        if (rDiff < requiredPulses && lDiff < requiredPulses)
+        switch (encoderMode)
         {
-            if ((requiredPulses - rDiff) < 2 || (requiredPulses - lDiff) < 2)
-            {
-                setMotors(55, 55);
-            }
+        case FORWARD:
+        {
+            int lDiff = getLCounter() - initialLeftCounter;
+            int rDiff = getRCounter() - initialRightCounter;
 
+            if (rDiff < requiredPulses && lDiff < requiredPulses)
+            {
+                if ((requiredPulses - rDiff) < 2 || (requiredPulses - lDiff) < 2)
+                {
+                    setMotors(55, 55);
+                }
+
+                else
+                {
+
+                    setMotors(100, 100);
+                }
+            }
             else
             {
-
-                setMotors(100, 100);
+                brake();
+                stopMotors();
+                encoderMode = STOPMOVE;
+                initialLeftCounter = 0;
+                initialRightCounter = 0;
             }
+            break;
         }
-        else
-        {
-            brake();
-            stopMotors();
-            encoderMode = STOPMOVE;
-            initialLeftCounter = 0;
-            initialRightCounter = 0;
-        }
-        break;
-    }
 
-    case TURN:
+        case TURN:
+        {
+
+            if (getLCounter(true) - initialLeftCounter >= requiredPulses)
+            {
+                stopMotors();
+                encoderMode = STOPMOVE;
+                initialLeftCounter = 0;
+                setMotorForward(0);
+                setMotorForward(1);
+            }
+            else
+            {
+                setMotors(45, 45);
+            }
+            break;
+        }
+
+        case STOPMOVE:
+            break;
+
+        default:
+            break;
+        }
+    }
+    else
     {
-
-        if (getLCounter(true) - initialLeftCounter >= requiredPulses)
-        {
-            stopMotors();
-            encoderMode = STOPMOVE;
-            initialLeftCounter = 0;
-            setMotorForward(0);
-            setMotorForward(1);
-        }
-        break;
-    }
-    case STOPMOVE:
-        break;
-
-    default:
-        break;
+        stopMotors();
     }
 }
 
@@ -126,19 +138,9 @@ void IncrementCounter()
 void turnDirection(int direction)
 {
     initialLeftCounter = getLCounter(true);
-    // Serial.println(initialLeftCounter);
+    setMotorBackward(direction);
 
     requiredPulses = 4;
-
-    if (direction == 0) // Turn Left
-    {
-        setMotorBackward(0);
-    }
-    else if (direction == 1) // Turn Right
-    {
-        setMotorBackward(1);
-    }
-    setMotors(35, 35);
     encoderMode = TURN;
 }
 

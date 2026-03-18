@@ -8,3 +8,4 @@ void ultraSonicSetup();
 void ultraSonicLoop();
 int getDistance();
 void setLastValue(bool value);
+bool getStop();

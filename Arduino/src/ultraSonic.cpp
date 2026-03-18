@@ -6,6 +6,7 @@
 int distance;
 unsigned long previousMillisUS = 0;
 int repCount = 0;
+bool stop = false;
 
 // @brief sets up ultrasonic sensor
 void ultraSonicSetup()
@@ -41,9 +42,8 @@ void ultraSonicLoop()
             repCount = 0;
             distance = 50;
             Serial.println("No Obsticale");
-
             setDisableIr(false);
-            enableMotors();
+            stop = false;
             return;
         }
         else
@@ -71,17 +71,18 @@ void ultraSonicLoop()
         {
             Serial.println("Obstacle");
             setDisableIr(true);
-            disableMotors();
+            stop = true;
         }
         else
         {
             Serial.println("No Obsticale");
-
             setDisableIr(false);
-            enableMotors();
+            stop = false;
         }
     }
 }
 
 // @brief returns distance using function to prevent issues with accessing variables from other files directly
 int getDistance() { return distance; }
+
+bool getStop() { return stop; }
