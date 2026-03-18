@@ -140,7 +140,7 @@ void turnDirection(int direction)
     initialLeftCounter = getLCounter(true);
     setMotorBackward(direction);
 
-    requiredPulses = 4;
+    requiredPulses = 5;
     encoderMode = TURN;
 }
 
