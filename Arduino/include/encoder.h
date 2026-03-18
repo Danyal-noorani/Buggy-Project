@@ -19,7 +19,7 @@ enum MoveMode
 };
 
 void hallSensorsSetup();
-int getLCounter(bool highRes =false);
+int getLCounter(bool highRes = false);
 int getRCounter();
 void hallSensorsLoop();
 void turnDirection(int direction);
@@ -27,3 +27,4 @@ void moveDistance(int distance);
 double getAverageCounter();
 double getTotalDistance();
 double getSpeed();
+void setRequiredPulses(int pulses);

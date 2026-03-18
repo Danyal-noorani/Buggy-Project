@@ -1,8 +1,8 @@
 #pragma once
 #include "Arduino.h"
 
-#define TRIG 3
-#define ECHO 2
+#define TRIG 12
+#define ECHO 11
 
 void ultraSonicSetup();
 void ultraSonicLoop();

@@ -8,7 +8,6 @@ unsigned long previousMillisMotor = 0;
 uint8_t maxSpeed = 80;
 float turnMultiplier = 0.17;
 float slowDownFactor = 0.55;
-// float motorBalanceValue = 0.93;
 float motorBalanceValue = 1;
 bool newUpdate = false;
 
@@ -180,4 +179,15 @@ void setSlowDownFactor(float newSlowDownFactor)
     Serial.println(newSlowDownFactor);
     slowDownFactor = constrain(newSlowDownFactor, 0, 1);
     newUpdate = true;
+}
+
+void brake()
+{
+    setMotorBackward(1);
+    setMotorBackward(0);
+    setMotors(25, 25);
+    delay(200);
+    stopMotors();
+    setMotorForward(1);
+    setMotorForward(0);
 }

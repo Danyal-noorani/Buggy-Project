@@ -32,3 +32,4 @@ void setMotorBalance(float newMotorBalanceValue);
 void setSlowDownFactor(float newSlowDownFactor);
 void setMotorForward(int motor);
 void setMotorBackward(int motor);
+void brake();

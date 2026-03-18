@@ -7,12 +7,11 @@ void updateSpeed();
 void updateTotalDistance();
 
 volatile int leftCounter = 0;
-int rightCounter = 0;
 
-long sinceLastSpeedUpdate = millis();
-double realSpeed = 0.0;
+volatile long sinceLastSpeedUpdate = 0;
+volatile double realSpeed = 0.0;
 
-long sinceLastPulse = sinceLastSpeedUpdate;
+volatile long sinceLastPulse = sinceLastSpeedUpdate;
 
 double totalDistance = 0.0;
 
@@ -29,7 +28,7 @@ void hallSensorsSetup()
     pinMode(LeftSensor, INPUT_PULLUP);
 
     // Attach Interrupt
-    attachInterrupt(digitalPinToInterrupt(LeftSensor), IncrementCounter, CHANGE); // Rising as analogue only takes input on HIGH
+    attachInterrupt(digitalPinToInterrupt(LeftSensor), IncrementCounter, CHANGE);
 
     // -- RIGHT SENSOR --
     pinMode(ClockPin, OUTPUT);
@@ -47,7 +46,7 @@ void hallSensorsLoop()
 {
 
     long currentMillis = millis();
-    if (sinceLastSpeedUpdate + 1000 > currentMillis)
+    if (currentMillis - sinceLastSpeedUpdate > 1000)
     {
         realSpeed = 0;
     }
@@ -59,19 +58,18 @@ void hallSensorsLoop()
     {
         int lDiff = getLCounter() - initialLeftCounter;
         int rDiff = getRCounter() - initialRightCounter;
-        Serial.println(lDiff);
-        Serial.println(rDiff);
-        Serial.println(requiredPulses);
+
         if (rDiff < requiredPulses && lDiff < requiredPulses)
         {
-            if (rDiff - requiredPulses <= 2 || lDiff - requiredPulses <= 2)
+            if ((rDiff - requiredPulses) < 2 || (lDiff - requiredPulses) < 2)
             {
                 setMotors(35, 35);
             }
             else
             {
+                // setMotors(35, 35);
 
-                setMotors(35, 35);
+                setMotors(100, 100);
             }
         }
         else
@@ -87,9 +85,9 @@ void hallSensorsLoop()
     case TURN:
     {
         // Serial.println("TURNING");
-        Serial.println(getLCounter(true));
+        // Serial.println(getLCounter(true));
 
-        if (getLCounter(true) - initialLeftCounter > requiredPulses)
+        if (getLCounter(true) - initialLeftCounter >= requiredPulses)
         {
             stopMotors();
             encoderMode = STOPMOVE;
@@ -107,6 +105,11 @@ void hallSensorsLoop()
     }
 }
 
+void setRequiredPulses(int pulses)
+{
+    requiredPulses = pulses;
+}
+
 void IncrementCounter()
 {
     leftCounter += 1;
@@ -120,7 +123,7 @@ void IncrementCounter()
 void turnDirection(int direction)
 {
     initialLeftCounter = getLCounter(true);
-    Serial.println(initialLeftCounter);
+    // Serial.println(initialLeftCounter);
 
     requiredPulses = 4;
 
@@ -139,7 +142,7 @@ void turnDirection(int direction)
 void moveDistance(int distance)
 {
     requiredPulses = ceil(distance / DistancePerPulse);
-    Serial.println(requiredPulses);
+    // Serial.println(requiredPulses);
     encoderMode = FORWARD;
     initialLeftCounter = getLCounter();
     initialRightCounter = getRCounter();
@@ -148,13 +151,14 @@ void moveDistance(int distance)
 void updateSpeed()
 {
     long currentMillis = millis();
-    realSpeed = DistancePerPulse / (currentMillis - sinceLastPulse);
+    realSpeed = DistancePerPulse * 100 / (currentMillis - sinceLastPulse) * 2;
     sinceLastPulse = currentMillis;
+    sinceLastSpeedUpdate = currentMillis;
 }
 
 void updateTotalDistance()
 {
-    totalDistance += DistancePerPulse;
+    totalDistance += DistancePerPulse / 2;
 }
 
 double getAverageCounter()
@@ -183,6 +187,12 @@ int getRCounter()
     delayMicroseconds(40);
     digitalWrite(LatchPin, LOW);
     return (int)shiftIn(DataPin, ClockPin);
+}
+void calibrateMotors()
+{
+    moveDistance(100);
+    int L = getLCounter();
+    int R = getRCounter();
 }
 // ------------------------------------------------------------------------------------------------------------------------
 byte shiftIn(int myDataPin, int myClockPin)

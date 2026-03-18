@@ -1,5 +1,6 @@
 #include "ultraSonic.h"
 #include "irSensor.h"
+#include "encoder.h"
 
 int distance;
 unsigned long previousMillisUS = 0;
@@ -34,7 +35,6 @@ void ultraSonicLoop()
          * stop the loop till it gets a reading causing delay/jitter
          */
         int duration = pulseIn(ECHO, HIGH, 3000);
-
         if (!duration) // ie if duration == 0
         {
             repCount = 0;
@@ -67,6 +67,7 @@ void ultraSonicLoop()
         {
             // Serial.println("Obstacle");
             setDisableIr(true);
+            setRequiredPulses(0);
         }
         else
         {
