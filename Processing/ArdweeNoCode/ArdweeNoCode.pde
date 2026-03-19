@@ -226,10 +226,7 @@ void controlEvent(ControlEvent e) {
   if (millis()-lastCommandTime > 50) {
     lastCommandTime = millis();
     switch(e.getName()) {
-    case "START":
-      stopped = false;
-      myClient.write("START\n");
-      break;
+
 
     case "STOP":
       stopped = true;
