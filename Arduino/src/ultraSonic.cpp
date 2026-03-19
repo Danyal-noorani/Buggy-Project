@@ -3,15 +3,14 @@
 #include "encoder.h"
 #include "motors.h"
 
-int distance;
-unsigned long previousMillisUS = 0;
-int repCount = 0;
-bool stop = false;
+static int distance;
+static unsigned long previousMillisUS = 0;
+static int repCount = 0;
+static bool stop = false;
 
 // @brief sets up ultrasonic sensor
 void ultraSonicSetup()
 {
-    Serial.begin(9600);
     pinMode(TRIG, OUTPUT);
     pinMode(ECHO, INPUT);
 }
@@ -41,14 +40,14 @@ void ultraSonicLoop()
         {
             repCount = 0;
             distance = 50;
-            Serial.println("No Obsticale");
+            // Serial.println("No Obsticale");
             setDisableIr(false);
             stop = false;
             return;
         }
         else
         {
-            distance = duration * 0.034 / 2;
+            distance = duration * 0.017f;
         }
 
         if (distance < 25)
@@ -69,13 +68,13 @@ void ultraSonicLoop()
 
         if (repCount >= 3)
         {
-            Serial.println("Obstacle");
+            // Serial.println("Obstacle");
             setDisableIr(true);
             stop = true;
         }
         else
         {
-            Serial.println("No Obsticale");
+            // Serial.println("No Obsticale");
             setDisableIr(false);
             stop = false;
         }

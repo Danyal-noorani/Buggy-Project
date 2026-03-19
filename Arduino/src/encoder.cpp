@@ -2,85 +2,84 @@
 #include "encoder.h"
 #include "ultraSonic.h"
 
-byte shiftIn(int myDataPin, int myClockPin);
-void IncrementCounter();
-void updateSpeed();
-void updateTotalDistance();
-void updateCalibrateMotors();
+static byte shiftIn(int myDataPin, int myClockPin);
+static void IncrementCounter();
+static void updateSpeed();
+static void updateTotalDistance();
+static void updateCalibrateMotors();
 
-volatile int leftCounter = 0;
+static volatile int leftCounter = 0;
+static volatile long sinceLastSpeedUpdate = 0;
+static volatile double realSpeed = 0.0;
+static volatile long sinceLastPulse = 0;
 
-volatile long sinceLastSpeedUpdate = 0;
-volatile double realSpeed = 0.0;
+static long sinceLastCalibration = 0;
+static double totalDistance = 0.0;
 
-volatile long sinceLastPulse = 0;
+static int requiredPulses = 0;
+static int initialRightCounter = 0;
+static int initialLeftCounter = 0;
 
-long sinceLastCalibration = 0;
-
-double totalDistance = 0.0;
-
-int requiredPulses = 0;
-int initialRightCounter = 0;
-int initialLeftCounter = 0;
-
-MoveMode encoderMode = STOPMOVE;
+static MoveMode encoderMode = STOPMOVE;
 
 void hallSensorsSetup()
 {
-    // -- LEFT SENSOR --
-    // Pullup Input
+    // Left sensor — interrupt on both edges (8 pulses/rev)
     pinMode(LeftSensor, INPUT_PULLUP);
-
-    // Attach Interrupt
     attachInterrupt(digitalPinToInterrupt(LeftSensor), IncrementCounter, CHANGE);
 
-    // -- RIGHT SENSOR --
+    // Right sensor — shift-register IC (4 pulses/rev)
     pinMode(ClockPin, OUTPUT);
     pinMode(LatchPin, OUTPUT);
     pinMode(DataPin, INPUT);
     pinMode(ResetPin, OUTPUT);
 
-    // Resets encoder everytime Arduino is turned on
+    // Reset IC counter on startup
     digitalWrite(ResetPin, HIGH);
     delayMicroseconds(20);
     digitalWrite(ResetPin, LOW);
+
     sinceLastCalibration = sinceLastPulse = sinceLastSpeedUpdate = millis();
 }
 
 void hallSensorsLoop()
 {
     long currentMillis = millis();
-    if (currentMillis - sinceLastCalibration > 1000)
+
+    if (currentMillis - sinceLastCalibration > 100)
     {
-        updateCalibrateMotors();
+        updateCalibrateMotors(); // update motor balance every second
         sinceLastCalibration = currentMillis;
     }
 
+    // resets speed after 1 second
     if (currentMillis - sinceLastSpeedUpdate > 1000)
-    {
         realSpeed = 0;
-    }
 
-    if (!getStop())
+    if (!getStop() || encoderMode == TURN)
     {
         switch (encoderMode)
         {
         case FORWARD:
         {
+            // Both counters at 4 pulses/rev for direct comparison
             int lDiff = getLCounter() - initialLeftCounter;
             int rDiff = getRCounter() - initialRightCounter;
+
+            // Serial.print(rDiff + initialRightCounter);
+            // Serial.println(lDiff + initialLeftCounter);
 
             if (rDiff < requiredPulses && lDiff < requiredPulses)
             {
                 if ((requiredPulses - rDiff) < 2 || (requiredPulses - lDiff) < 2)
                 {
-                    setMotors(55, 55);
-                }
 
+                    // Slow down in final 2 pulses to reduce overshoot
+                    setMotors(40, 40);
+                }
                 else
                 {
-
-                    setMotors(100, 100);
+                    setMotors(55, 55);
                 }
             }
             else
@@ -96,25 +95,31 @@ void hallSensorsLoop()
 
         case TURN:
         {
+            int lDiff = getLCounter(true) - initialLeftCounter;
+            int rDiff = getRCounter() - initialRightCounter;
+            int rDiffHighRes = rDiff * 2;            // scale right to 8 pulse/rev
+            int leadDiff = max(rDiffHighRes, lDiff); // stop on whichever leads to prevent overshoot
 
-            if (getLCounter(true) - initialLeftCounter >= requiredPulses)
+            if (leadDiff >= requiredPulses)
             {
                 stopMotors();
                 encoderMode = STOPMOVE;
                 initialLeftCounter = 0;
+                initialRightCounter = 0;
                 setMotorForward(0);
                 setMotorForward(1);
             }
             else
             {
-                setMotors(45, 45);
+                if (requiredPulses - leadDiff <= 2)
+                    setMotors(35, 35);
+                else
+                    setMotors(55, 55);
             }
             break;
         }
 
         case STOPMOVE:
-            break;
-
         default:
             break;
         }
@@ -125,67 +130,68 @@ void hallSensorsLoop()
     }
 }
 
-void IncrementCounter()
+// fires on every CHANGE edge of the left sensor
+static void IncrementCounter()
 {
     leftCounter += 1;
-    if (encoderMode == FORWARD) // Updates Speed and distance only if moving forward
+    updateSpeed();
+    sinceLastPulse = millis();
+    if (encoderMode == FORWARD)
     {
-        updateSpeed();
         updateTotalDistance();
     }
 }
 
+// 90° turn
 void turnDirection(int direction)
 {
     initialLeftCounter = getLCounter(true);
+    initialRightCounter = getRCounter();
     setMotorBackward(direction);
-
-    requiredPulses = 5;
+    requiredPulses = (int)ceil((PI * WHEELBASE_CM / 4.0f) / DistancePerPulseHighRes);
+    encoderMode = TURN;
+}
+void adjustDirection(int direction)
+{
+    initialLeftCounter = getLCounter(true);
+    initialRightCounter = getRCounter();
+    setMotorBackward(direction);
+    requiredPulses = 1;
     encoderMode = TURN;
 }
 
 void moveDistance(int distance)
 {
     requiredPulses = ceil(distance / DistancePerPulse);
-    // Serial.println(requiredPulses);
     encoderMode = FORWARD;
     initialLeftCounter = getLCounter();
     initialRightCounter = getRCounter();
 }
 
-void updateSpeed()
+static void updateSpeed()
 {
     long currentMillis = millis();
-    realSpeed = DistancePerPulse * 100 / (currentMillis - sinceLastPulse) * 2;
-    sinceLastPulse = currentMillis;
+    // Each ISR fires once per CHANGE edge = DistancePerPulseHighRes (2.55 cm) traveled
+    realSpeed = DistancePerPulseHighRes * 1000.0f / (currentMillis - sinceLastPulse);
     sinceLastSpeedUpdate = currentMillis;
 }
 
-void updateTotalDistance()
+static void updateTotalDistance()
 {
-    totalDistance += DistancePerPulse / 2;
+    totalDistance += DistancePerPulse / 2; // ISR fires twice per low-res pulse
 }
 
-double getAverageCounter()
-{
-    return (getLCounter() + getRCounter()) / 2.0;
-}
+double getAverageCounter() { return (getLCounter() + getRCounter()) / 2.0; }
+double getTotalDistance() { return totalDistance; }
+double getSpeed() { return realSpeed; }
 
-double getTotalDistance()
-{
-    return totalDistance;
-}
-double getSpeed()
-{
-    return realSpeed;
-}
-
+// true → raw 8 pulse/rev; false → divided by 2 to match right encoder (4 pulse/rev)
 int getLCounter(bool highRes)
 {
-    if (highRes)
-        return leftCounter;
-    return leftCounter / 2;
+    return highRes ? leftCounter : leftCounter / 2;
 }
+
+// Latch counter IC then clock out byte via shift register
 int getRCounter()
 {
     digitalWrite(LatchPin, HIGH);
@@ -193,89 +199,32 @@ int getRCounter()
     digitalWrite(LatchPin, LOW);
     return (int)shiftIn(DataPin, ClockPin);
 }
-void updateCalibrateMotors()
-{
 
+// Adjusts motor PWM balance to keep both wheels at equal speed (constrained to ±20%)
+static void updateCalibrateMotors()
+{
     int L = getLCounter();
     int R = getRCounter();
     if (L == 0 || R == 0)
         return;
-    float temp = (float)R / (float)L;
-    temp = constrain(temp, 0.8, 1.0);
-    Serial.println(temp);
-    setMotorBalance(temp);
+    // L/R: if right is faster (R > L), ratio < 1, reducing right motor PWM to compensate
+    float ratio = (float)L / (float)R;
+    setMotorBalance(ratio);
 }
-// ------------------------------------------------------------------------------------------------------------------------
-byte shiftIn(int myDataPin, int myClockPin)
+
+// byte from the shift register
+static byte shiftIn(int myDataPin, int myClockPin)
 {
-
-    int i;
-
-    int temp = 0;
-
-    int pinState;
-
     byte myDataIn = 0;
 
-    pinMode(myClockPin, OUTPUT);
-
-    pinMode(myDataPin, INPUT);
-    // we will be holding the clock pin high 8 times (0,..,7) at the
-    // end of each time through the for loop
-
-    // at the beginning of each loop when we set the clock low, it will
-    // be doing the necessary low to high drop to cause the shift
-    // register's DataPin to change state based on the value
-    // of the next bit in its serial information flow.
-    // The register transmits the information about the pins from pin 7 to pin 0
-    // so that is why our function counts down
-
-    for (i = 7; i >= 0; i--)
-
+    for (int i = 7; i >= 0; i--)
     {
-
         digitalWrite(myClockPin, 0);
-
-        delayMicroseconds(0.2);
-
-        temp = digitalRead(myDataPin);
-
-        if (temp)
-        {
-
-            pinState = 1;
-
-            // set the bit to 0 no matter what
-
-            myDataIn = myDataIn | (1 << i);
-        }
-
-        else
-        {
-
-            // turn it off -- only necessary for debugging
-
-            // print statement since myDataIn starts as 0
-
-            pinState = 0;
-        }
-
-        // Debugging print statements
-
-        // Serial.print(pinState);
-
-        // Serial.print("     ");
-
-        // Serial.println (dataIn, BIN);
-
+        delayMicroseconds(1);
+        if (digitalRead(myDataPin))
+            myDataIn |= (1 << i);
         digitalWrite(myClockPin, 1);
     }
-
-    // debugging print statements whitespace
-
-    // Serial.println();
-
-    // Serial.println(myDataIn, BIN);
 
     return myDataIn;
 }

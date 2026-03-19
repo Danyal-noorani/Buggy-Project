@@ -4,18 +4,18 @@
 #include "ultraSonic.h"
 #include "irSensor.h"
 #include "encoder.h"
+#include "motion.h"
 
-char ssid[] = "W4_BEST_GROUP";
-char pass[] = "ardweeNo";
-int status = WL_IDLE_STATUS;
-WiFiServer server(5200);
+static const char ssid[] = "W4_BEST_GROUP";
+static const char pass[] = "ardweeNo";
+static int status = WL_IDLE_STATUS;
+static WiFiServer server(5200);
 
-unsigned long previousMillisWiFi = 0;
+static unsigned long previousMillisWiFi = 0;
 
 // @brief sets up WiFi Service
 void WiFiSetup()
 {
-    Serial.begin(9600);
     Serial.print("Network named:");
     Serial.println(ssid);
     status = WiFi.beginAP(ssid, pass);
@@ -33,7 +33,7 @@ void WiFiLoop()
     {
         unsigned long currentMillisWiFi = millis();
 
-        if (currentMillisWiFi - previousMillisWiFi > 10) // Polls web service only every 300 ms
+        if (currentMillisWiFi - previousMillisWiFi > 10) // Polls web service only every 10 ms
         {
             previousMillisWiFi = currentMillisWiFi;
 
@@ -48,7 +48,6 @@ void WiFiLoop()
 
                 // Null terminate required for strcmp
                 buffer[len] = '\0';
-                Serial.println(buffer);
 
                 if (strcmp(buffer, "START") == 0)
                 {
@@ -68,6 +67,17 @@ void WiFiLoop()
                 {
                     turnDirection(0);
                 }
+
+                else if (strcmp(buffer, "ARIGHT") == 0)
+                {
+                    adjustDirection(1);
+                }
+
+                else if (strcmp(buffer, "ALEFT") == 0)
+                {
+                    adjustDirection(0);
+                }
+
                 else if (strncmp(buffer, "MOVE:", 5) == 0)
                 {
                     char *token = strtok(buffer + 5, ":");
@@ -75,6 +85,27 @@ void WiFiLoop()
                     {
                         moveDistance(atoi(token));
                     }
+                }
+
+                // PI-controlled: MOVEAT:{speed_cm_per_sec}:{distance_cm}
+                else if (strncmp(buffer, "MOVEAT:", 7) == 0)
+                {
+                    char *token = strtok(buffer + 7, ":");
+                    if (token != NULL)
+                    {
+                        float speed = atof(token);
+                        token = strtok(NULL, ":");
+                        if (token != NULL)
+                        {
+                            moveAtSpeed(speed, atoi(token));
+                        }
+                    }
+                }
+
+                // PI-controlled continuous speed: SPEED:{cm_per_sec}  (0 to stop)
+                else if (strncmp(buffer, "SPEED:", 6) == 0)
+                {
+                    setTargetSpeed(atof(buffer + 6));
                 }
 
                 else if (strcmp(buffer, "GET_DATA") == 0)

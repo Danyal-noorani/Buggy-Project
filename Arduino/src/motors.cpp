@@ -2,14 +2,15 @@
 #include <Arduino.h>
 #include "motors.h"
 
-MotorMoveMode mode = STOP;
-int lastMode = 0;
-unsigned long previousMillisMotor = 0;
-uint8_t maxSpeed = 80;
-float turnMultiplier = 0.17;
-float slowDownFactor = 0.55;
-float motorBalanceValue = 1;
-bool newUpdate = false;
+static MotorMoveMode mode = STOP;
+static int lastMode = 0;
+static unsigned long previousMillisMotor = 0;
+static uint8_t maxSpeed = 80;
+static float turnMultiplier = 0.17f;
+static float slowDownFactor = 0.55f;
+static float motorBalance = 0.92f;
+
+static bool newUpdate = false;
 
 // @brief Sets up motor pins and enables forward direction
 void setupMotors()
@@ -74,7 +75,7 @@ void disableMotors()
     digitalWrite(LeftMotorP2, LOW);
 }
 
-// @brief stops motors (using PWN)
+// @brief stops motors (using PWM)
 void stopMotors()
 {
     analogWrite(RightMotorPWM, 0);
@@ -117,8 +118,10 @@ void setMotors(int speedLeft, int speedRight)
     speedLeft = constrain(speedLeft, 0, 100);
 
     // scales speed values between 0 and 255 and applies motor balance
-    analogWrite(RightMotorPWM, 2.55 * motorBalanceValue * speedRight);
-    analogWrite(LeftMotorPWM, 2.55 * speedLeft);
+    // analogWrite(RightMotorPWM, 2.55f * motorBalanceRight * speedRight);
+    analogWrite(RightMotorPWM, 2.55f * motorBalance * speedRight);
+
+    analogWrite(LeftMotorPWM, 2.55f * speedLeft);
 }
 
 // @brief reduces overall speed by slowDownFactor and reduces speed of right motor by another factor of turnMultiplier
@@ -145,8 +148,8 @@ void setMode(MotorMoveMode newMode)
 // @param newMaxSpeed New speed
 void setMaxSpeed(int newMaxSpeed)
 {
-    Serial.print("Max Speed: ");
-    Serial.println(newMaxSpeed);
+    // Serial.print("Max Speed: ");
+    // Serial.println(newMaxSpeed);
     maxSpeed = constrain(newMaxSpeed, 0, 100);
     newUpdate = true;
 }
@@ -155,8 +158,8 @@ void setMaxSpeed(int newMaxSpeed)
 // @param newTurnMultiplier New turn multiplier
 void setTurnMultiplier(float newTurnMultiplier)
 {
-    Serial.print("Turn Multiplier: ");
-    Serial.println(newTurnMultiplier);
+    // Serial.print("Turn Multiplier: ");
+    // Serial.println(newTurnMultiplier);
     turnMultiplier = constrain(newTurnMultiplier, 0, 1);
     newUpdate = true;
 }
@@ -165,10 +168,11 @@ void setTurnMultiplier(float newTurnMultiplier)
 // @param newMaxSpeed New motor balance
 void setMotorBalance(float newMotorBalanceValue)
 {
-    Serial.print("Motor Balance: ");
-    Serial.println(newMotorBalanceValue);
-    motorBalanceValue = constrain(newMotorBalanceValue, 0, 1);
-    newUpdate = true;
+    newMotorBalanceValue = constrain(newMotorBalanceValue, 0.75f, 1.3f);
+    // Low-pass filter to smooth out noisy encoder readings
+    motorBalance = motorBalance * 0.8f + newMotorBalanceValue * 0.2f;
+    // Serial.print("Motor Balance: ");
+    // Serial.println(motorBalance);
 }
 
 // @brief sets slow down factor using processing
