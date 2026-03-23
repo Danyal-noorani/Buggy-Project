@@ -1,8 +1,9 @@
 #pragma once
 #include "Arduino.h"
 
-#define RightIRPin 11
-#define LeftIRPin 10
+#define RightIRPin 1
+#define LeftIRPin 0
+// left: 2, right: 3
 
 void setupIrSensors();
 void IrSensorLoop();

@@ -8,7 +8,7 @@ static unsigned long previousMillisMotor = 0;
 static uint8_t maxSpeed = 80;
 static float turnMultiplier = 0.17f;
 static float slowDownFactor = 0.55f;
-static float motorBalance = 0.92f;
+static float motorBalance = 1.1f;
 
 static bool newUpdate = false;
 
@@ -168,9 +168,9 @@ void setTurnMultiplier(float newTurnMultiplier)
 // @param newMaxSpeed New motor balance
 void setMotorBalance(float newMotorBalanceValue)
 {
-    newMotorBalanceValue = constrain(newMotorBalanceValue, 0.75f, 1.3f);
+    newMotorBalanceValue = constrain(newMotorBalanceValue, 1.1f, 1.2f);
     // Low-pass filter to smooth out noisy encoder readings
-    motorBalance = motorBalance * 0.8f + newMotorBalanceValue * 0.2f;
+    motorBalance = motorBalance * 0.6f + newMotorBalanceValue * 0.4f;
     // Serial.print("Motor Balance: ");
     // Serial.println(motorBalance);
 }

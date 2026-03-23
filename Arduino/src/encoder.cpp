@@ -3,12 +3,14 @@
 #include "ultraSonic.h"
 
 static byte shiftIn(int myDataPin, int myClockPin);
-static void IncrementCounter();
+static void IncrementRightCounter();
+static void IncrementLeftCounter();
 static void updateSpeed();
 static void updateTotalDistance();
 static void updateCalibrateMotors();
 
 static volatile int leftCounter = 0;
+static volatile int rightCounter = 0;
 static volatile long sinceLastSpeedUpdate = 0;
 static volatile double realSpeed = 0.0;
 static volatile long sinceLastPulse = 0;
@@ -26,18 +28,8 @@ void hallSensorsSetup()
 {
     // Left sensor — interrupt on both edges (8 pulses/rev)
     pinMode(LeftSensor, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(LeftSensor), IncrementCounter, CHANGE);
-
-    // Right sensor — shift-register IC (4 pulses/rev)
-    pinMode(ClockPin, OUTPUT);
-    pinMode(LatchPin, OUTPUT);
-    pinMode(DataPin, INPUT);
-    pinMode(ResetPin, OUTPUT);
-
-    // Reset IC counter on startup
-    digitalWrite(ResetPin, HIGH);
-    delayMicroseconds(20);
-    digitalWrite(ResetPin, LOW);
+    attachInterrupt(digitalPinToInterrupt(LeftSensor), IncrementLeftCounter, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(RightSensor), IncrementRightCounter, CHANGE);
 
     sinceLastCalibration = sinceLastPulse = sinceLastSpeedUpdate = millis();
 }
@@ -46,7 +38,7 @@ void hallSensorsLoop()
 {
     long currentMillis = millis();
 
-    if (currentMillis - sinceLastCalibration > 100)
+    if (currentMillis - sinceLastCalibration > 500)
     {
         updateCalibrateMotors(); // update motor balance every second
         sinceLastCalibration = currentMillis;
@@ -62,16 +54,12 @@ void hallSensorsLoop()
         {
         case FORWARD:
         {
-            // Both counters at 4 pulses/rev for direct comparison
             int lDiff = getLCounter() - initialLeftCounter;
             int rDiff = getRCounter() - initialRightCounter;
 
-            // Serial.print(rDiff + initialRightCounter);
-            // Serial.println(lDiff + initialLeftCounter);
-
             if (rDiff < requiredPulses && lDiff < requiredPulses)
             {
-                if ((requiredPulses - rDiff) < 2 || (requiredPulses - lDiff) < 2)
+                if ((requiredPulses - rDiff) < 3 || (requiredPulses - lDiff) < 3)
                 {
 
                     // Slow down in final 2 pulses to reduce overshoot
@@ -79,7 +67,7 @@ void hallSensorsLoop()
                 }
                 else
                 {
-                    setMotors(55, 55);
+                    setMotors(65, 65);
                 }
             }
             else
@@ -100,7 +88,7 @@ void hallSensorsLoop()
             int rDiffHighRes = rDiff * 2;            // scale right to 8 pulse/rev
             int leadDiff = max(rDiffHighRes, lDiff); // stop on whichever leads to prevent overshoot
 
-            if (leadDiff >= requiredPulses)
+            if (lDiff >= requiredPulses)
             {
                 stopMotors();
                 encoderMode = STOPMOVE;
@@ -112,9 +100,9 @@ void hallSensorsLoop()
             else
             {
                 if (requiredPulses - leadDiff <= 2)
-                    setMotors(35, 35);
+                    setMotors(40, 40);
                 else
-                    setMotors(55, 55);
+                    setMotors(60, 60);
             }
             break;
         }
@@ -131,7 +119,7 @@ void hallSensorsLoop()
 }
 
 // fires on every CHANGE edge of the left sensor
-static void IncrementCounter()
+static void IncrementLeftCounter()
 {
     leftCounter += 1;
     updateSpeed();
@@ -140,6 +128,11 @@ static void IncrementCounter()
     {
         updateTotalDistance();
     }
+}
+
+static void IncrementRightCounter()
+{
+    rightCounter += 1;
 }
 
 // 90° turn
@@ -188,16 +181,13 @@ double getSpeed() { return realSpeed; }
 // true → raw 8 pulse/rev; false → divided by 2 to match right encoder (4 pulse/rev)
 int getLCounter(bool highRes)
 {
-    return highRes ? leftCounter : leftCounter / 2;
+    return leftCounter;
 }
 
 // Latch counter IC then clock out byte via shift register
 int getRCounter()
 {
-    digitalWrite(LatchPin, HIGH);
-    delayMicroseconds(40);
-    digitalWrite(LatchPin, LOW);
-    return (int)shiftIn(DataPin, ClockPin);
+    return rightCounter;
 }
 
 // Adjusts motor PWM balance to keep both wheels at equal speed (constrained to ±20%)
@@ -208,7 +198,7 @@ static void updateCalibrateMotors()
     if (L == 0 || R == 0)
         return;
     // L/R: if right is faster (R > L), ratio < 1, reducing right motor PWM to compensate
-    float ratio = (float)L / (float)R;
+    float ratio = (float)R / (float)L;
     setMotorBalance(ratio);
 }
 

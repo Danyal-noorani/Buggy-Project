@@ -97,7 +97,7 @@ void WiFiLoop()
                         token = strtok(NULL, ":");
                         if (token != NULL)
                         {
-                            moveAtSpeed(speed, atoi(token));
+                            moveDistance(atoi(token));
                         }
                     }
                 }

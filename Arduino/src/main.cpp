@@ -14,6 +14,7 @@ void setup()
     // setupIrSensors();
     setupMotors();
     hallSensorsSetup();
+    moveAtSpeed(25, 10);
 }
 void loop()
 {
@@ -22,6 +23,6 @@ void loop()
     ultraSonicLoop();
     // IrSensorLoop();
     // motorLoop();
-    hallSensorsLoop();
-    // motionLoop();
+    // hallSensorsLoop();
+    motionLoop();
 }

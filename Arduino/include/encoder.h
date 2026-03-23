@@ -1,11 +1,12 @@
 #include <Arduino.h>
 
 #define LeftSensor 2 // Left wheel hall-effect sensor (interrupt pin)
+#define RightSensor 3
 
-#define LatchPin 1  // HIGH→LOW latches counter into shift register
-#define ClockPin 10 // Shifts one bit out per pulse
-#define DataPin 13  // Serial data from shift register
-#define ResetPin 0  // Active-HIGH clears IC counter
+// #define LatchPin 1  // HIGH→LOW latches counter into shift register
+// #define ClockPin 10 // Shifts one bit out per pulse
+// #define DataPin 13  // Serial data from shift register
+// #define ResetPin 0  // Active-HIGH clears IC counter
 
 #define TURN_LEFT 0
 #define TURN_RIGHT 1
