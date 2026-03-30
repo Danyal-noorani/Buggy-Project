@@ -20,8 +20,8 @@ void loop()
 
     WiFiLoop();
     ultraSonicLoop();
-    // IrSensorLoop();
-    // motorLoop();
+    IrSensorLoop();
+    motorLoop();
     // hallSensorsLoop();
     motionLoop();
 }

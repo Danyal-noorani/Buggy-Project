@@ -2,9 +2,9 @@
 #include <Arduino.h>
 
 // PI controller gains — increase KP for faster response, KI to reduce steady-state error
-#define MOTION_KP 0.6f
-#define MOTION_KI 0.3f
-#define MOTION_KD 0.03f
+#define MOTION_KP 0.7f
+#define MOTION_KI 0.4f
+#define MOTION_KD 0.01f
 
 void motionLoop();
 void setTargetSpeed(float cmPerSec);           // continuous speed, no distance limit

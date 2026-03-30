@@ -90,11 +90,15 @@ void motionLoop()
     if ((now - sinceLastPid) > 300)
     {
         float error = targetSpeed - getSpeed();
-        integral = constrain(integral + error * dt, -30.0f, 30.0f);
-        derivative = (error - previous_error) / dt;
-        derivative = constrain(derivative, -150.0f, 150.0f);
-        motorPower = constrain(MOTION_KP * error, -50.0f, 50.0f);
-        previous_error = error;
+        if (abs(error) > 1.5f) // deadband: ignore small errors that are just noise
+        {
+            integral = constrain(integral + error * dt, -30.0f, 30.0f);
+            derivative = (error - previous_error) / dt;
+            derivative = constrain(derivative, -150.0f, 150.0f);
+            motorPower = constrain(MOTION_KP * error + MOTION_KI * integral + MOTION_KD * derivative, -60.0f, 60.0f);
+            previous_error = error;
+        }
+        Serial.println(motorPower);
         editMotorsSpeed((int)motorPower, (int)motorPower);
         sinceLastPid = now;
     }

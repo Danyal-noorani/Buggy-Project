@@ -6,7 +6,7 @@ static MotorMoveMode mode = STOP;
 static int lastMode = 0;
 static unsigned long previousMillisMotor = 0;
 static uint8_t maxSpeed = 80;
-static float turnMultiplier = 0.17f;
+static float turnMultiplier = 0.8f;
 static float slowDownFactor = 0.55f;
 static float motorBalance = 1.1f;
 static int prevRightMotor = 0;
@@ -45,19 +45,19 @@ void motorLoop()
         switch (mode)
         {
         case 0:
-            setMotors(maxSpeed, maxSpeed);
+            // setMotors(maxSpeed, maxSpeed);
+            turnLeftFactor = turnRightFactor = 1.0f;
             break;
         case 1:
-            turnRight();
+            turnLeft();
             break;
         case 2:
-            turnLeft();
+            turnRight();
             break;
         case 3:
             stopMotors();
             break;
         default:
-            turnLeftFactor = turnRightFactor = 1.0f;
             break;
         }
     }
@@ -120,9 +120,7 @@ void setMotorForward(int motor)
 void setMotors(int speedLeft, int speedRight)
 
 {
-    Serial.print(speedRight);
-    Serial.print(" ");
-    Serial.println(speedLeft);
+
     speedRight = constrain(speedRight, 0, 100);
     speedLeft = constrain(speedLeft, 0, 100);
 
