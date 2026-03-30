@@ -14,7 +14,7 @@ void setup()
     // setupIrSensors();
     setupMotors();
     hallSensorsSetup();
-    moveAtSpeed(25, 10);
+    moveAtSpeed(25, 120);
 }
 void loop()
 {

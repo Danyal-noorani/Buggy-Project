@@ -18,6 +18,7 @@ static float previous_error = 0;
 static float previous_speed = 0.0f;
 static float filtered_error = 0.0f;
 const float ALPHA = 0.3f;
+static long sinceLastPid = 0;
 
 // Set a continuous target speed (cm/s). Pass 0 to stop.
 void setTargetSpeed(float cmPerSec)
@@ -87,24 +88,15 @@ void motionLoop()
         }
     }
 
-    // PI controller: error between desired and measured speed
-    float error = targetSpeed - getSpeed();
-    // Serial.println(getSpeed());
-    integral = constrain(integral + error * dt, -30.0f, 30.0f); // clamp to prevent windup
-    // Calculate derivative on measurement (prevents derivative kick)
-    // filtered_error = ALPHA * error + (1.0f - ALPHA) * filtered_error;
-    // derivative = (filtered_error - previous_error) / dt;
-    // derivative = constrain(derivative, -150.0f, 150.0f);
-    derivative = (getSpeed() - previous_speed) / dt;
-    derivative = constrain(derivative, -150000.0f, 150000.0f);
-    motorPower = constrain(MOTION_KP * error + MOTION_KI * integral + MOTION_KD * derivative, 0.0f, 100.0f) * 1.5;
-    Serial.print(integral);
-    Serial.print(" ");
-    Serial.print(derivative);
-    Serial.print(" ");
-    Serial.print(error);
-    Serial.print(" ");
-    Serial.println(motorPower);
-    previous_error = error;
-    setMotors((int)motorPower, (int)motorPower);
+    if ((now - sinceLastPid) > 300)
+    {
+        float error = targetSpeed - getSpeed();
+        integral = constrain(integral + error * dt, -30.0f, 30.0f);
+        derivative = (getSpeed() - previous_speed) / dt;
+        derivative = constrain(derivative, -150.0f, 150.0f);
+        motorPower = constrain(MOTION_KP * error, -50.0f, 50.0f);
+        previous_error = error;
+        editMotorsSpeed((int)motorPower, (int)motorPower);
+        sinceLastPid = now;
+    }
 }

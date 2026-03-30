@@ -9,8 +9,13 @@ static uint8_t maxSpeed = 80;
 static float turnMultiplier = 0.17f;
 static float slowDownFactor = 0.55f;
 static float motorBalance = 1.1f;
+static int prevRightMotor = 0;
+static int prevLeftMotor = 0;
 
 static bool newUpdate = false;
+
+static float turnRightFactor = 1.0f;
+static float turnLeftFactor = 1.0f;
 
 // @brief Sets up motor pins and enables forward direction
 void setupMotors()
@@ -52,6 +57,7 @@ void motorLoop()
             stopMotors();
             break;
         default:
+            turnLeftFactor = turnRightFactor = 1.0f;
             break;
         }
     }
@@ -112,28 +118,34 @@ void setMotorForward(int motor)
 
 // @brief sets motors (using PWN)
 void setMotors(int speedLeft, int speedRight)
+
 {
-    // constrains input values between -100 and 100
+    Serial.print(speedRight);
+    Serial.print(" ");
+    Serial.println(speedLeft);
     speedRight = constrain(speedRight, 0, 100);
     speedLeft = constrain(speedLeft, 0, 100);
 
+    prevLeftMotor = speedLeft;
+    prevRightMotor = speedRight;
+
     // scales speed values between 0 and 255 and applies motor balance
     // analogWrite(RightMotorPWM, 2.55f * motorBalanceRight * speedRight);
-    analogWrite(RightMotorPWM, 2.55f * motorBalance * speedRight);
+    analogWrite(RightMotorPWM, 2.55f * motorBalance * speedRight * turnRightFactor);
 
-    analogWrite(LeftMotorPWM, 2.55f * speedLeft);
+    analogWrite(LeftMotorPWM, 2.55f * speedLeft * turnLeftFactor);
 }
 
 // @brief reduces overall speed by slowDownFactor and reduces speed of right motor by another factor of turnMultiplier
 void turnRight()
 {
-    setMotors(maxSpeed * slowDownFactor, maxSpeed * turnMultiplier * slowDownFactor);
+    turnRightFactor = turnMultiplier * slowDownFactor;
 }
 
 // @brief reduces overall speed by slowDownFactor and reduces speed of left motor by another factor of turnMultiplier
 void turnLeft()
 {
-    setMotors(maxSpeed * turnMultiplier * slowDownFactor, maxSpeed * slowDownFactor);
+    turnLeftFactor = turnMultiplier * slowDownFactor;
 }
 
 // @brief sets movement Mode
@@ -183,6 +195,11 @@ void setSlowDownFactor(float newSlowDownFactor)
     Serial.println(newSlowDownFactor);
     slowDownFactor = constrain(newSlowDownFactor, 0, 1);
     newUpdate = true;
+}
+
+void editMotorsSpeed(int offsetLeft, int offsetRight)
+{
+    setMotors(prevLeftMotor + offsetLeft, prevRightMotor + offsetRight);
 }
 
 void brake()

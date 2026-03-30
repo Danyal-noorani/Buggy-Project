@@ -165,8 +165,13 @@ static void updateSpeed()
 {
     long currentMillis = millis();
     // Each ISR fires once per CHANGE edge = DistancePerPulseHighRes (2.55 cm) traveled
-    realSpeed = DistancePerPulseHighRes * 1000.0f / (currentMillis - sinceLastPulse);
-    sinceLastSpeedUpdate = currentMillis;
+    int newRealSpeed = DistancePerPulseHighRes * 1000.0f / (currentMillis - sinceLastPulse);
+    if (abs(realSpeed - newRealSpeed) < 30 && newRealSpeed < 60 && currentMillis - sinceLastSpeedUpdate > 150)
+    {
+        sinceLastSpeedUpdate = currentMillis;
+        realSpeed = newRealSpeed;
+    }
+    sinceLastPulse = currentMillis;
 }
 
 static void updateTotalDistance()
