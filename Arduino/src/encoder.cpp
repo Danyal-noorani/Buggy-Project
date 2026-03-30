@@ -83,7 +83,7 @@ void hallSensorsLoop()
 
         case TURN:
         {
-            int lDiff = getLCounter(true) - initialLeftCounter;
+            int lDiff = getLCounter() - initialLeftCounter;
             int rDiff = getRCounter() - initialRightCounter;
             int rDiffHighRes = rDiff * 2;            // scale right to 8 pulse/rev
             int leadDiff = max(rDiffHighRes, lDiff); // stop on whichever leads to prevent overshoot
@@ -138,7 +138,7 @@ static void IncrementRightCounter()
 // 90° turn
 void turnDirection(int direction)
 {
-    initialLeftCounter = getLCounter(true);
+    initialLeftCounter = getLCounter();
     initialRightCounter = getRCounter();
     setMotorBackward(direction);
     requiredPulses = (int)ceil((PI * WHEELBASE_CM / 4.0f) / DistancePerPulseHighRes);
@@ -146,7 +146,7 @@ void turnDirection(int direction)
 }
 void adjustDirection(int direction)
 {
-    initialLeftCounter = getLCounter(true);
+    initialLeftCounter = getLCounter();
     initialRightCounter = getRCounter();
     setMotorBackward(direction);
     requiredPulses = 1;
@@ -181,10 +181,15 @@ static void updateTotalDistance()
 
 double getAverageCounter() { return (getLCounter() + getRCounter()) / 2.0; }
 double getTotalDistance() { return totalDistance; }
-double getSpeed() { return realSpeed; }
+double getSpeed()
+{
+    if (millis() - sinceLastPulse > 500)
+        realSpeed = 0.0;
+    return realSpeed;
+}
 
 // true → raw 8 pulse/rev; false → divided by 2 to match right encoder (4 pulse/rev)
-int getLCounter(bool highRes)
+int getLCounter()
 {
     return leftCounter;
 }

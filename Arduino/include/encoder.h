@@ -30,7 +30,7 @@ enum MoveMode
 };
 
 void hallSensorsSetup();
-int getLCounter(bool highRes = false);
+int getLCounter();
 int getRCounter();
 void hallSensorsLoop();
 void turnDirection(int direction);

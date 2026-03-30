@@ -180,7 +180,9 @@ void setTurnMultiplier(float newTurnMultiplier)
 // @param newMaxSpeed New motor balance
 void setMotorBalance(float newMotorBalanceValue)
 {
-    newMotorBalanceValue = constrain(newMotorBalanceValue, 1.1f, 1.2f);
+
+    // ** Might Not work **
+    newMotorBalanceValue = constrain(newMotorBalanceValue, 0.8f, 1.2f);
     // Low-pass filter to smooth out noisy encoder readings
     motorBalance = motorBalance * 0.6f + newMotorBalanceValue * 0.4f;
     // Serial.print("Motor Balance: ");

@@ -14,9 +14,7 @@ static int startRightCounter = 0;
 static long lastLoopMs = 0;
 static int secondsRequired = 0;
 static long initialMillis = 0;
-static float previous_error = 0;
-static float previous_speed = 0.0f;
-static float filtered_error = 0.0f;
+static float previous_error = 0.0f;
 const float ALPHA = 0.3f;
 static long sinceLastPid = 0;
 
@@ -35,6 +33,7 @@ void setTargetSpeed(float cmPerSec)
 // Drive distanceCm at cmPerSec, then stop automatically.
 void moveAtSpeed(float cmPerSec, int seconds)
 {
+    Serial.println("moveAtSpeed");
     targetSpeed = cmPerSec;
     motorPower = 0.0f;
     integral = 0.0f;
@@ -92,7 +91,7 @@ void motionLoop()
     {
         float error = targetSpeed - getSpeed();
         integral = constrain(integral + error * dt, -30.0f, 30.0f);
-        derivative = (getSpeed() - previous_speed) / dt;
+        derivative = (error - previous_error) / dt;
         derivative = constrain(derivative, -150.0f, 150.0f);
         motorPower = constrain(MOTION_KP * error, -50.0f, 50.0f);
         previous_error = error;

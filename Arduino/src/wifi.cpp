@@ -108,6 +108,21 @@ void WiFiLoop()
                     setTargetSpeed(atof(buffer + 6));
                 }
 
+                // PI-controlled: MOVET:{speed_cm_per_sec}:{seconds}
+                else if (strncmp(buffer, "MOVET:", 6) == 0)
+                {
+                    char *token = strtok(buffer + 6, ":");
+                    if (token != NULL)
+                    {
+                        float speed = atof(token);
+                        token = strtok(NULL, ":");
+                        if (token != NULL)
+                        {
+                            moveAtSpeed(speed, atoi(token));
+                        }
+                    }
+                }
+
                 else if (strcmp(buffer, "GET_DATA") == 0)
                 {
                     /* ----------- NOT BEING USED -----------
