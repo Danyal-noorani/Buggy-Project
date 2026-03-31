@@ -88,7 +88,8 @@ void stopMotors()
     analogWrite(LeftMotorPWM, 0);
 }
 
-void setMotorBackward(int motor) // motor = 1 RIght Motor Else Left Motor
+// Sets given motor backwards 1=right else left
+void setMotorBackward(int motor)
 {
     if (motor == 1)
     {
@@ -102,6 +103,7 @@ void setMotorBackward(int motor) // motor = 1 RIght Motor Else Left Motor
     }
 }
 
+// Sets given motor forwards 1=right else left
 void setMotorForward(int motor)
 {
     if (motor == 1)
@@ -197,6 +199,7 @@ void setSlowDownFactor(float newSlowDownFactor)
     newUpdate = true;
 }
 
+// adds offsets to each of the current motor speeds
 void editMotorsSpeed(int offsetLeft, int offsetRight)
 {
     setMotors(prevLeftMotor + offsetLeft, prevRightMotor + offsetRight);

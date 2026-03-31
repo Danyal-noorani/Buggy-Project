@@ -24,29 +24,29 @@ static int initialLeftCounter = 0;
 
 static MoveMode encoderMode = STOPMOVE;
 
+// Setting up hall sensors on interrupt pins
 void hallSensorsSetup()
 {
     // Left sensor — interrupt on both edges (8 pulses/rev)
     pinMode(LeftSensor, INPUT_PULLUP);
+    pinMode(RightSensor, INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(LeftSensor), IncrementLeftCounter, CHANGE);
     attachInterrupt(digitalPinToInterrupt(RightSensor), IncrementRightCounter, CHANGE);
 
-    sinceLastCalibration = sinceLastPulse = sinceLastSpeedUpdate = millis();
+    sinceLastCalibration = sinceLastPulse = sinceLastSpeedUpdate = millis(); // initialize timers
 }
 
+// ONLY USED FOR SILVER
 void hallSensorsLoop()
 {
     long currentMillis = millis();
 
+    // update motor balance every 500 MS
     if (currentMillis - sinceLastCalibration > 500)
     {
-        updateCalibrateMotors(); // update motor balance every second
+        updateCalibrateMotors();
         sinceLastCalibration = currentMillis;
     }
-
-    // resets speed after 1 second
-    if (currentMillis - sinceLastSpeedUpdate > 1000)
-        realSpeed = 0;
 
     if (!getStop() || encoderMode == TURN)
     {
@@ -61,7 +61,6 @@ void hallSensorsLoop()
             {
                 if ((requiredPulses - rDiff) < 3 || (requiredPulses - lDiff) < 3)
                 {
-
                     // Slow down in final 2 pulses to reduce overshoot
                     setMotors(40, 40);
                 }
@@ -85,7 +84,7 @@ void hallSensorsLoop()
         {
             int lDiff = getLCounter() - initialLeftCounter;
             int rDiff = getRCounter() - initialRightCounter;
-            int rDiffHighRes = rDiff * 2;            // scale right to 8 pulse/rev
+            int rDiffHighRes = rDiff * 2;            // scale right to 8 pulse/rev (THIS IS WHEN USING THE ICs TO GET THE COUNTS)
             int leadDiff = max(rDiffHighRes, lDiff); // stop on whichever leads to prevent overshoot
 
             if (lDiff >= requiredPulses)
@@ -122,8 +121,10 @@ void hallSensorsLoop()
 static void IncrementLeftCounter()
 {
     leftCounter += 1;
-    updateSpeed();
+    updateSpeed(); // Update speed on pulse
     sinceLastPulse = millis();
+
+    // Updates Total distance only if its moving forward
     if (encoderMode == FORWARD)
     {
         updateTotalDistance();
@@ -141,9 +142,11 @@ void turnDirection(int direction)
     initialLeftCounter = getLCounter();
     initialRightCounter = getRCounter();
     setMotorBackward(direction);
-    requiredPulses = (int)ceil((PI * WHEELBASE_CM / 4.0f) / DistancePerPulseHighRes);
+    requiredPulses = (int)ceil((PI * WHEELBASE_CM / 4.0f) / DistancePerPulseHighRes); // required pulses calculated from wheelbase and HighResPulseDistance( 8 pulses )
     encoderMode = TURN;
 }
+
+// only moves for 1 pulse
 void adjustDirection(int direction)
 {
     initialLeftCounter = getLCounter();
@@ -161,12 +164,14 @@ void moveDistance(int distance)
     initialRightCounter = getRCounter();
 }
 
+// Update speed variable using time since last pulse
 static void updateSpeed()
 {
     long currentMillis = millis();
     // Each ISR fires once per CHANGE edge = DistancePerPulseHighRes (2.55 cm) traveled
     int newRealSpeed = DistancePerPulseHighRes * 1000.0f / (currentMillis - sinceLastPulse);
-    if (abs(realSpeed - newRealSpeed) < 30 && newRealSpeed < 60 && currentMillis - sinceLastSpeedUpdate > 150)
+    // prevents errors and impossible jumps in obtained speed value and only update every 50 ms to reduce jitter
+    if (abs(realSpeed - newRealSpeed) < 30 && newRealSpeed < 60 && currentMillis - sinceLastSpeedUpdate > 50)
     {
         sinceLastSpeedUpdate = currentMillis;
         realSpeed = newRealSpeed;
@@ -174,21 +179,21 @@ static void updateSpeed()
     sinceLastPulse = currentMillis;
 }
 
+// Updates total distance but will be wrong now as both the hall sensors are on interrupt pins
 static void updateTotalDistance()
 {
-    totalDistance += DistancePerPulse / 2; // ISR fires twice per low-res pulse
+    totalDistance += DistancePerPulse / 2;
 }
 
-double getAverageCounter() { return (getLCounter() + getRCounter()) / 2.0; }
 double getTotalDistance() { return totalDistance; }
+
 double getSpeed()
 {
-    if (millis() - sinceLastPulse > 500)
+    if (millis() - sinceLastPulse > 500) // returns 0 if no pulse for 500ms
         realSpeed = 0.0;
     return realSpeed;
 }
 
-// true → raw 8 pulse/rev; false → divided by 2 to match right encoder (4 pulse/rev)
 int getLCounter()
 {
     return leftCounter;
@@ -200,7 +205,7 @@ int getRCounter()
     return rightCounter;
 }
 
-// Adjusts motor PWM balance to keep both wheels at equal speed (constrained to ±20%)
+// Adjusts motor PWM balance to keep both wheels at equal speed
 static void updateCalibrateMotors()
 {
     int L = getLCounter();

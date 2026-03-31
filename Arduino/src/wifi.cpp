@@ -49,46 +49,48 @@ void WiFiLoop()
                 // Null terminate required for strcmp
                 buffer[len] = '\0';
 
-                if (strcmp(buffer, "START") == 0)
-                {
-                    enableMotors();
-                }
+                // if (strcmp(buffer, "START") == 0)
+                // {
+                //     enableMotors();
+                // }
 
-                else if (strcmp(buffer, "STOP") == 0)
-                {
-                    disableMotors();
-                }
-                else if (strcmp(buffer, "RIGHT") == 0)
-                {
-                    turnDirection(1);
-                }
+                // else if (strcmp(buffer, "STOP") == 0)
+                // {
+                //     disableMotors();
+                // }
 
-                else if (strcmp(buffer, "LEFT") == 0)
-                {
-                    turnDirection(0);
-                }
-
-                else if (strcmp(buffer, "ARIGHT") == 0)
-                {
-                    adjustDirection(1);
-                }
-
-                else if (strcmp(buffer, "ALEFT") == 0)
-                {
-                    adjustDirection(0);
-                }
-
-                else if (strncmp(buffer, "MOVE:", 5) == 0)
-                {
-                    char *token = strtok(buffer + 5, ":");
-                    if (token != NULL)
-                    {
-                        moveDistance(atoi(token));
-                    }
-                }
+                // Turn 90 right ( Silver Challenge )
+                // if (strcmp(buffer, "RIGHT") == 0)
+                // {
+                //     turnDirection(1);
+                // }
+                // Turn 90 left ( Silver Challenge )
+                // else if (strcmp(buffer, "LEFT") == 0)
+                // {
+                //     turnDirection(0);
+                // }
+                // Adjust Right ( Silver Challenge )
+                // else if (strcmp(buffer, "ARIGHT") == 0)
+                // {
+                //     adjustDirection(1);
+                // }
+                // Adjust left ( Silver Challenge )
+                // else if (strcmp(buffer, "ALEFT") == 0)
+                // {
+                //     adjustDirection(0);
+                // }
+                // Move X distance ( Silver Challenge )
+                // else if (strncmp(buffer, "MOVE:", 5) == 0)
+                // {
+                //     char *token = strtok(buffer + 5, ":");
+                //     if (token != NULL)
+                //     {
+                //         moveDistance(atoi(token));
+                //     }
+                // }
 
                 // PI-controlled: MOVEAT:{speed_cm_per_sec}:{distance_cm}
-                else if (strncmp(buffer, "MOVEAT:", 7) == 0)
+                if (strncmp(buffer, "MOVEAT:", 7) == 0)
                 {
                     char *token = strtok(buffer + 7, ":");
                     if (token != NULL)
@@ -100,12 +102,6 @@ void WiFiLoop()
                             moveDistance(atoi(token));
                         }
                     }
-                }
-
-                // PI-controlled continuous speed: SPEED:{cm_per_sec}  (0 to stop)
-                else if (strncmp(buffer, "SPEED:", 6) == 0)
-                {
-                    setTargetSpeed(atof(buffer + 6));
                 }
 
                 // PI-controlled: MOVET:{speed_cm_per_sec}:{seconds}

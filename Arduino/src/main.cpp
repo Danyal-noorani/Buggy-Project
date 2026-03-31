@@ -11,7 +11,7 @@ void setup()
 
     ultraSonicSetup();
     WiFiSetup();
-    // setupIrSensors();
+    setupIrSensors();
     setupMotors();
     hallSensorsSetup();
 }
@@ -22,6 +22,5 @@ void loop()
     ultraSonicLoop();
     IrSensorLoop();
     motorLoop();
-    // hallSensorsLoop();
     motionLoop();
 }

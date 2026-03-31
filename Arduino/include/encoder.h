@@ -35,7 +35,6 @@ int getRCounter();
 void hallSensorsLoop();
 void turnDirection(int direction);
 void moveDistance(int distance);
-double getAverageCounter();
 double getTotalDistance();
 double getSpeed();
 void adjustDirection(int direction);

@@ -47,8 +47,6 @@ void moveAtSpeed(float cmPerSec, int seconds)
 bool motionBusy() { return moving; }
 
 // Runs the PI controller and handles distance stopping.
-// NOTE: do not call moveDistance() / hallSensorsLoop() motor control at the same
-// time — encoderMode must stay STOPMOVE while motionLoop is active.
 void motionLoop()
 {
 
@@ -68,7 +66,6 @@ void motionLoop()
         return; // skip if called faster than 5 ms to avoid integral noise
     lastLoopMs = now;
 
-    // Distance check — stop when either wheel reaches the target
     if (moving)
     {
         if (secondsRequired < (millis() - initialMillis) / 1000)
@@ -87,10 +84,10 @@ void motionLoop()
         }
     }
 
-    if ((now - sinceLastPid) > 300)
+    if ((now - sinceLastPid) > 100) // Updates PID every 100 MS
     {
         float error = targetSpeed - getSpeed();
-        if (abs(error) > 1.5f) // deadband: ignore small errors that are just noise
+        if (abs(error) > 1.5f) // error deadzone to prevent jitter
         {
             integral = constrain(integral + error * dt, -30.0f, 30.0f);
             derivative = (error - previous_error) / dt;
