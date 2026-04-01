@@ -18,6 +18,42 @@ static float previous_error = 0.0f;
 const float ALPHA = 0.3f;
 static long sinceLastPid = 0;
 
+// Command list
+#define CMD_LIST_SIZE 8
+struct MotionCmd
+{
+    int speed;
+    int seconds;
+};
+
+static MotionCmd cmdList[CMD_LIST_SIZE] = {{10, 10}, {20, 20}, {30, 30}};
+static int index = 3;
+
+void pushMotionCmd(int speed, int seconds)
+{
+    if (index == 8)
+        return;
+    cmdList[index].speed = speed;
+    cmdList[index].seconds = seconds;
+    index++;
+}
+
+void clearMotionCmds()
+{
+    index = 0;
+}
+
+void popCommand(MotionCmd &cmd)
+{
+    if (index == 0)
+        return;
+    index--;
+    cmd = cmdList[index];
+    Serial.print(cmd.speed);
+    Serial.print(" seconds at speed ");
+    Serial.println(cmd.seconds);
+}
+
 // Set a continuous target speed (cm/s). Pass 0 to stop.
 void setTargetSpeed(float cmPerSec)
 {
@@ -50,6 +86,14 @@ bool motionBusy() { return moving; }
 void motionLoop()
 {
 
+    MotionCmd cmd;
+
+    if (index > 0 && !moving)
+    {
+        popCommand(cmd);
+        moveAtSpeed(cmd.speed, cmd.seconds);
+    }
+
     if (targetSpeed == 0.0f && !moving)
         return;
 
@@ -70,8 +114,7 @@ void motionLoop()
     {
         if (secondsRequired < (millis() - initialMillis) / 1000)
         {
-            Serial.println(secondsRequired);
-            Serial.println((millis() - initialMillis) / 1000);
+
             brake();
             stopMotors();
             moving = false;
@@ -80,6 +123,9 @@ void motionLoop()
             integral = 0.0f;
             initialMillis = 0;
             secondsRequired = 0;
+
+            // Start next queued command if available
+
             return;
         }
     }
@@ -95,7 +141,6 @@ void motionLoop()
             motorPower = constrain(MOTION_KP * error + MOTION_KI * integral + MOTION_KD * derivative, -60.0f, 60.0f);
             previous_error = error;
         }
-        Serial.println(motorPower);
         editMotorsSpeed((int)motorPower, (int)motorPower);
         sinceLastPid = now;
     }

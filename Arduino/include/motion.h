@@ -11,3 +11,4 @@ void setTargetSpeed(float cmPerSec);           // continuous speed, no distance 
 void moveAtSpeed(float cmPerSec, int seconds); // drive distanceCm at cmPerSec then stop
 bool motionBusy();                             // true while moveAtSpeed is in progress
 void editMotorsSpeed(int offsetLeft, int offsetRight);
+void pushMotionCmd(int speed, int seconds); // add command to list

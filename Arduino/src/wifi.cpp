@@ -40,7 +40,7 @@ void WiFiLoop()
             if (client.connected())
             {
                 // Buffer where input will be stored
-                static char buffer[64];
+                static char buffer[128];
 
                 int len = client.readBytesUntil('\n', buffer, sizeof(buffer) - 1);
                 if (len <= 0)
@@ -104,22 +104,42 @@ void WiFiLoop()
                     }
                 }
 
-                // PI-controlled: MOVET:{speed_cm_per_sec}:{seconds}
+                // MOVET:speed1,speed2,speed3:time1,time2,time3
                 else if (strncmp(buffer, "MOVET:", 6) == 0)
                 {
-                    char *token = strtok(buffer + 6, ":");
-                    if (token != NULL)
+                    char *speedsStr = buffer + 6;
+                    char *colon = strchr(speedsStr, ':');
+                    if (colon != NULL)
                     {
-                        float speed = atof(token);
-                        token = strtok(NULL, ":");
-                        if (token != NULL)
+                        *colon = '\0';
+                        char *timesStr = colon + 1;
+
+                        int speeds[8];
+                        int times[8];
+                        int count = 0;
+
+                        char *token = strtok(speedsStr, ",");
+                        while (token != NULL && count < 8)
                         {
-                            moveAtSpeed(speed, atoi(token));
+                            speeds[count++] = atoi(token);
+                            token = strtok(NULL, ",");
                         }
+
+                        int tcount = 0;
+                        token = strtok(timesStr, ",");
+                        while (token != NULL && tcount < count)
+                        {
+                            times[tcount++] = atoi(token);
+                            token = strtok(NULL, ",");
+                        }
+
+                        // Push in reverse so LIFO pops in original order
+                        for (int i = count - 1; i >= 0; i--)
+                            pushMotionCmd(speeds[i], times[i]);
                     }
                 }
 
-                else if (strcmp(buffer, "GET_DATA") == 0)
+                        else if (strcmp(buffer, "GET_DATA") == 0)
                 {
                     /* ----------- NOT BEING USED -----------
                     Send flowing structure ->  distance:LeftIRP_State:RightIRP_State
