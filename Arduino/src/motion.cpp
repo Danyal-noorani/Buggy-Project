@@ -38,11 +38,6 @@ void pushMotionCmd(int speed, int seconds)
     index++;
 }
 
-void clearMotionCmds()
-{
-    index = 0;
-}
-
 void popCommand(MotionCmd &cmd)
 {
     if (index == 0)
