@@ -26,13 +26,12 @@ struct MotionCmd
     int seconds;
 };
 
-static MotionCmd cmdList[CMD_LIST_SIZE] = {{10, 10}, {20, 20}, {30, 30}};
-static int index = 3;
+static MotionCmd cmdList[CMD_LIST_SIZE] = {};
+static int index = 0;
 
 void pushMotionCmd(int speed, int seconds)
 {
-    if (index == 8)
-        return;
+
     cmdList[index].speed = speed;
     cmdList[index].seconds = seconds;
     index++;
