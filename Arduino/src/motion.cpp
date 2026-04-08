@@ -132,7 +132,7 @@ void motionLoop()
             integral = constrain(integral + error * dt, -30.0f, 30.0f);
             derivative = (error - previous_error) / dt;
             derivative = constrain(derivative, -150.0f, 150.0f);
-            motorPower = constrain(MOTION_KP * error + MOTION_KI * integral + MOTION_KD * derivative, -60.0f, 60.0f);
+            motorPower = constrain(MOTION_KP * error + MOTION_KI * integral + MOTION_KD * derivative, -60.0f, 60.0f) * 0.2;
             previous_error = error;
         }
         editMotorsSpeed((int)motorPower, (int)motorPower);
