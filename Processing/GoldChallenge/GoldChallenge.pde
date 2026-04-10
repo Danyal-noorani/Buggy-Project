@@ -8,7 +8,9 @@ ArrayList<Float> profileTimes  = new ArrayList<Float>();
 ArrayList<Float> profileSpeeds = new ArrayList<Float>();
 float profileStartTime = -1;
 boolean profileRunning = false;
-
+int mseCount = 0;
+float mseCumulative = 0;
+float finalMSE = 0;
 ArrayList<Float> mseHistory = new ArrayList<Float>();
 ArrayList<Float> targetSpeedHistory = new ArrayList<Float>();
 ArrayList<Float> actualSpeedTimes  = new ArrayList<Float>();
@@ -58,14 +60,11 @@ void settings() {
 
 void setup() {
   carY = height - 130;
-
   myClient = new Client(this, "192.168.4.1", 5200);
   cp5 = new ControlP5(this);
-
   PFont labelFont = createFont("Space Grotesk", 20);
   PFont btnFont   = createFont("Space Grotesk", 24);
 
-  // --- Original TextFields ---
   nextDistance = cp5.addTextfield("DistanceInput")
     .setPosition(20, 320)
     .setFont(btnFont)
@@ -126,7 +125,6 @@ void setup() {
     .setSize(170, 50)
     .setLabel("\u21E8");
 
-  // --- Labels ---
   distanceLabel        = cp5.addLabel("Distance").setText("Distance: N/A").setFont(labelFont).setColor(color(255));
   speedLabel           = cp5.addLabel("LiveSpeed").setText("Speed : N/A").setFont(labelFont).setColor(color(255));
   distanceCoveredLabel = cp5.addLabel("DistanceCovered").setText("Total Distance Covered : N/A").setFont(labelFont).setColor(color(255));
@@ -240,7 +238,6 @@ void drawCar(float x, float y) {
 void draw() {
   background(245, 245, 230);
 
-  // ---------- Arrow above Turn Left ----------
   float leftBtnX   = turnLeft.getPosition()[0];
   float leftBtnY   = turnLeft.getPosition()[1];
   float leftBtnW   = turnLeft.getWidth();
@@ -257,7 +254,6 @@ void draw() {
   vertex(leftCenterX, leftBtnY - 60);
   endShape(CLOSE);
 
-  // ---------- Arrow above Turn Right ----------
   float rightBtnX    = turnRight.getPosition()[0];
   float rightBtnY    = turnRight.getPosition()[1];
   float rightBtnW    = turnRight.getWidth();
@@ -283,7 +279,6 @@ void draw() {
     greyOutWidgets();
   }
 
-  // ---------- Car Animation ----------
   fill(120);
   rect(0, height - 100, width, 100);
 
@@ -348,6 +343,10 @@ void controlEvent(ControlEvent e) {
         actualSpeedValues.clear();
         mseHistory.clear();
         targetSpeedHistory.clear();
+        mseCumulative = 0;
+        mseCount = 0;
+        finalMSE = 0;
+
         String[] speedParts = speedText.split(",");
         String[] timeParts  = timeText.split(",");
         float cursor = 0;
@@ -356,16 +355,15 @@ void controlEvent(ControlEvent e) {
           float dur = (i < timeParts.length) ? float(trim(timeParts[i])) : 5;
           profileTimes.add(cursor);
           profileSpeeds.add(spd);
-          //   myClient.write("MOVET:" + spd + ":" + dur + "\n"); // Not how Buggy handles
           cursor += dur;
         }
         profileTimes.add(cursor);
         profileSpeeds.add(profileSpeeds.get(profileSpeeds.size() - 1));
-        profileStartTime = millis();
-        profileRunning   = true;
         targetSpeedValue = profileSpeeds.get(0);
         println("MOVET:" + speedText + ":" + timeText + "\n");
         myClient.write("MOVET:" + speedText + ":" + timeText + "\n");
+        profileStartTime = millis();
+        profileRunning   = true;
       }
       break;
     }
@@ -384,7 +382,7 @@ void connectedStatus() {
 }
 
 int lastRequestTime = 0;
-int pollEveryMs     = 200;
+int pollEveryMs = 200;
 
 void getLiveData() {
   if (int(values[0]) > 25) {
@@ -407,11 +405,9 @@ void getLiveData() {
         if (values.length == 3) {
           distanceLabel.setText("Distance: " + values[0]);
           distanceLabel.setColor(color(0, 0, 0));
-          speedLabel.setText("Speed : " + values[1]);
 
           float actualSpeed = float(values[1]);
 
-          // Update targetSpeedValue from profile based on elapsed time
           if (profileRunning && profileTimes.size() > 0) {
             float elapsed = (millis() - profileStartTime) / 1000.0;
             targetSpeedValue = profileSpeeds.get(0);
@@ -423,16 +419,28 @@ void getLiveData() {
             }
           }
 
-          float error = actualSpeed - targetSpeedValue;
+          speedLabel.setText("Speed : " + actualSpeed);
+
+         float error = actualSpeed - targetSpeedValue;
           currentMSE  = error * error;
+         
           mseHistory.add(currentMSE);
           targetSpeedHistory.add(targetSpeedValue);
-
-          if (profileRunning) {
-            float elapsed = (millis() - profileStartTime) / 1000.0;
-            actualSpeedTimes.add(elapsed);
-            actualSpeedValues.add(actualSpeed);
-          }
+         
+                if (profileRunning) {
+        mseCumulative += currentMSE;
+        mseCount++;
+       
+        float elapsed = (millis() - profileStartTime) / 1000.0;
+        float totalDuration = profileTimes.get(profileTimes.size() - 1);
+        if (elapsed >= 0 && elapsed <= totalDuration + 4) {
+          actualSpeedTimes.add(elapsed);
+          actualSpeedValues.add(actualSpeed);
+        } else if (elapsed > totalDuration + 4) {
+          profileRunning = false;
+          finalMSE = (mseCount > 0) ? mseCumulative / mseCount : 0;
+        }
+      }
 
           if (mseHistory.size() > maxMSEPoints) {
             mseHistory.remove(0);
@@ -454,7 +462,6 @@ void alignLabels(Textlabel lbl, int y) {
   lbl.setPosition(centerX - labelWidth / 2, y);
 }
 
-// ---------------------- Graph ----------------------
 void drawMSEGraph() {
   fill(255, 245);
   stroke(0);
@@ -482,20 +489,17 @@ void drawMSEGraph() {
   float plotTop    = top    + 10;
   float plotBottom = bottom + 200;
 
-  // FIX: xMax based on actual total profile duration with 20% padding
   float xMax = 10;
   if (profileTimes.size() > 0) {
     float lastT = profileTimes.get(profileTimes.size() - 1);
     xMax = max(lastT * 1.2, 10);
   }
 
-  // Axes
   stroke(0);
   strokeWeight(1);
   line(plotLeft, plotBottom, plotRight, plotBottom);
   line(plotLeft, plotTop, plotLeft, plotBottom);
 
-  // Y ticks
   textSize(12);
   for (int yVal = 0; yVal <= 50; yVal += 5) {
     if (yVal == 0) continue;
@@ -508,7 +512,6 @@ void drawMSEGraph() {
     text(yVal, plotLeft - 25, y + 4);
   }
 
-  // X ticks
   textSize(12);
   float tickStep = (xMax <= 15) ? 2 : (xMax <= 30) ? 5 : (xMax <= 60) ? 10 : 15;
   for (float xVal = 0; xVal <= xMax; xVal += tickStep) {
@@ -521,26 +524,27 @@ void drawMSEGraph() {
     text((int)xVal, x - 8, plotBottom + 18);
   }
 
-  // ---------- REFERENCE step profile ----------
-  if (profileTimes.size() >= 2) {
-    stroke(30, 144, 255);
-    strokeWeight(2);
-    noFill();
-    beginShape();
-    for (int i = 0; i < profileTimes.size(); i++) {
-      float x = map(profileTimes.get(i), 0, xMax, plotLeft, plotRight);
-      float y = map(profileSpeeds.get(i), 0, 50, plotBottom, plotTop);
-      if (i > 0) {
-        float xPrev = map(profileTimes.get(i - 1), 0, xMax, plotLeft, plotRight);
-        vertex(xPrev, y); // horizontal step
-      }
-      vertex(x, y);
-    }
-    endShape();
+if (profileTimes.size() >= 2) {
+  stroke(30, 144, 255);
+  strokeWeight(2);
+  noFill();
+  beginShape();
+  float x0 = map(profileTimes.get(0), 0, xMax, plotLeft, plotRight);
+  float y0 = map(profileSpeeds.get(0), 0, 50, plotBottom, plotTop);
+  vertex(x0, y0);
+  for (int i = 1; i < profileTimes.size(); i++) {
+    float x    = map(profileTimes.get(i),     0, xMax, plotLeft, plotRight);
+    float xPrev = map(profileTimes.get(i - 1), 0, xMax, plotLeft, plotRight);
+    float y    = map(profileSpeeds.get(i),     0, 50, plotBottom, plotTop);
+    float yPrev = map(profileSpeeds.get(i - 1), 0, 50, plotBottom, plotTop);
+    vertex(xPrev, yPrev); // start of this segment at previous speed
+    vertex(x, yPrev);     // horizontal across to next time marker
+    vertex(x, y);         // vertical drop/rise to new speed
+  }
+  endShape();
 
     noStroke();
     fill(30, 144, 255);
-    // Only draw dots on real segment starts (exclude the appended end-point)
     for (int i = 0; i < profileTimes.size() - 1; i++) {
       float x = map(profileTimes.get(i), 0, xMax, plotLeft, plotRight);
       float y = map(profileSpeeds.get(i), 0, 50, plotBottom, plotTop);
@@ -548,35 +552,31 @@ void drawMSEGraph() {
     }
   }
 
-  // ---------- Elapsed time cursor ----------
-  if (profileRunning) {
-    float elapsed = (millis() - profileStartTime) / 1000.0;
-    float cx = map(elapsed, 0, xMax, plotLeft, plotRight);
-    if (cx <= plotRight) {
-      stroke(255, 140, 0, 180);
-      strokeWeight(1);
-      line(cx, plotTop, cx, plotBottom);
-    }
-  }
-
-  // ---------- ACTUAL speed (dashed pink) ----------
   if (actualSpeedValues.size() >= 2) {
+    int smoothWindow = 5;
     stroke(230, 30, 140);
     strokeWeight(2);
-    for (int i = 0; i < actualSpeedValues.size() - 1; i++) {
-      float x1 = map(actualSpeedTimes.get(i), 0, xMax, plotLeft, plotRight);
-      float x2 = map(actualSpeedTimes.get(i + 1), 0, xMax, plotLeft, plotRight);
-      float y1 = map(actualSpeedValues.get(i), 0, 50, plotBottom, plotTop);
-      float y2 = map(actualSpeedValues.get(i + 1), 0, 50, plotBottom, plotTop);
-      if (i % 2 == 0) line(x1, y1, x2, y2);
+    noFill();
+    beginShape();
+    for (int i = 0; i < actualSpeedValues.size(); i++) {
+      float smoothed = 0;
+      int count = 0;
+      for (int j = max(0, i - smoothWindow); j <= min(actualSpeedValues.size() - 1, i + smoothWindow); j++) {
+        smoothed += actualSpeedValues.get(j);
+        count++;
+      }
+      smoothed /= count;
+      float x = map(actualSpeedTimes.get(i), 0, xMax, plotLeft, plotRight);
+      float y = map(smoothed, 0, 50, plotBottom, plotTop);
+      vertex(x, y);
     }
+    endShape();
   } else {
     fill(120);
     textSize(13);
     text("Waiting for speed data...", plotLeft + 20, (plotTop + plotBottom) / 2);
   }
 
-  // ---------- LEGEND ----------
   float legendX = plotRight - 140;
   float legendY = plotTop + 10;
   fill(255, 245);
@@ -602,17 +602,9 @@ void drawMSEGraph() {
   noStroke();
   text("Buggy Speed", legendX + 25, legendY + 29);
 
-  stroke(255, 140, 0);
-  strokeWeight(1);
-  line(legendX, legendY + 42, legendX + 20, legendY + 42);
-  fill(0);
-  noStroke();
-  text("Elapsed time", legendX + 25, legendY + 46);
-
-  // ---------- Readout ----------
   fill(0);
   textSize(13);
   text("Target Speed: " + nf(targetSpeedValue, 1, 1) + " cm/s", graphX + 25, graphY + graphH + 230);
-  text("Current MSE: "  + nf(currentMSE, 1, 2), graphX + 25, graphY + graphH + 248);
+  text("MSE: " + nf(finalMSE, 1, 2), graphX + 25, graphY + graphH + 248);
   strokeWeight(1);
 }
